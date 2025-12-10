@@ -1,0 +1,11 @@
+{
+  "id": "supernote-companion",
+  "name": "Supernote Companion",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Import Supernote .note files as PDFs via the device's Browse & Access feature.",
+  "author": "dpshade",
+  "authorUrl": "https://github.com/dpshade",
+  "fundingUrl": "https://ko-fi.com/dpshade",
+  "isDesktopOnly": true
+}

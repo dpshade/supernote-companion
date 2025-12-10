@@ -1,0 +1,212 @@
+/* Supernote Companion Plugin Styles */
+
+/* Modal improvements */
+.supernote-modal {
+    max-width: 90vw;
+}
+
+/* Table styling */
+.supernote-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.supernote-table th {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--background-modifier-border);
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.supernote-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.supernote-table tr:hover {
+    background-color: var(--background-secondary);
+}
+
+/* Row selection highlight */
+.supernote-table tr.selected {
+    background-color: var(--background-modifier-hover);
+}
+
+/* Checkbox styling */
+.supernote-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Trash icon */
+.supernote-trash-icon {
+    cursor: pointer;
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: opacity 0.15s, color 0.15s;
+}
+
+.supernote-trash-icon:hover {
+    opacity: 1;
+    color: var(--text-error);
+}
+
+/* Status badges */
+.supernote-status-new {
+    color: var(--text-accent);
+    font-weight: 600;
+}
+
+.supernote-status-updated {
+    color: var(--color-orange);
+    font-weight: 600;
+}
+
+.supernote-status-synced {
+    color: var(--color-green);
+}
+
+.supernote-status-modified {
+    color: var(--text-warning);
+    font-weight: 600;
+}
+
+/* Summary cards */
+.supernote-summary {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    padding: 15px;
+    background-color: var(--background-secondary);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.supernote-summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.supernote-summary-count {
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.supernote-summary-label {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+/* Button container */
+.modal-button-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Collapsible sections */
+.supernote-collapsible-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.supernote-collapsible-header:hover {
+    color: var(--text-accent);
+}
+
+/* Field selector container */
+.specific-fields-container {
+    margin-left: 20px;
+    padding: 15px;
+    background-color: var(--background-secondary);
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+/* Scrollable containers */
+.supernote-scroll-container {
+    max-height: 450px;
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+}
+
+/* Progress indicator */
+.supernote-progress {
+    padding: 10px;
+    background-color: var(--background-secondary);
+    border-radius: 4px;
+    font-family: var(--font-monospace);
+    font-size: 0.9em;
+}
+
+/* Empty state */
+.supernote-empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+}
+
+.supernote-empty-state-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+/* Settings tab improvements */
+.supernote-settings h2 {
+    margin-top: 30px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.supernote-settings h2:first-child {
+    margin-top: 0;
+}
+
+/* Advanced settings section */
+.advanced-settings-container {
+    margin-top: 30px;
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 20px;
+}
+
+.advanced-header {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+}
+
+.advanced-header:hover {
+    color: var(--text-accent);
+}
+
+/* Keyboard navigation hint */
+.supernote-keyboard-hint {
+    font-size: 0.85em;
+    font-style: italic;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .supernote-modal {
+        width: 95% !important;
+        max-width: none !important;
+    }
+
+    .supernote-summary {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .modal-button-container {
+        flex-wrap: wrap;
+    }
+}

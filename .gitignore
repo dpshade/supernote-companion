@@ -1,0 +1,35 @@
+# Build output (main.js is committed for releases)
+*.js.map
+
+# Dependencies
+node_modules
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Obsidian
+data.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Development/Security - NEVER commit these
+.claude/
+.obsidian-vault-path
+vault-path.txt
+*.backup
+*.bak
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Lock files (using bun.lock)
+package-lock.json
+yarn.lock
