@@ -14,15 +14,15 @@ export class ConfirmationModal extends Modal {
     private onConfirm: (selectedNotes: SupernoteFile[]) => void;
     private onCancel: () => void;
     private onTrash: (noteId: string) => void;
-    
+
     // For showing modification status
     private lastSync?: number;
     private localNotes?: Map<string, LocalNoteFile>;
-    
+
     // Keyboard navigation
     private currentRowIndex: number = 0;
     private tableRows: HTMLTableRowElement[] = [];
-    
+
     // Button references
     private confirmButton: HTMLButtonElement | null = null;
     private selectAllBtn: HTMLButtonElement | null = null;
@@ -47,7 +47,7 @@ export class ConfirmationModal extends Modal {
         this.onConfirm = onConfirm;
         this.onCancel = onCancel;
         this.onTrash = onTrash;
-        
+
         // Start with all notes selected
         this.selectedNotes = new Set(notes.map(n => n.id));
     }
@@ -57,57 +57,39 @@ export class ConfirmationModal extends Modal {
         contentEl.empty();
 
         // Modal styling
-        this.modalEl.style.width = '85%';
-        this.modalEl.style.maxWidth = '1100px';
+        this.modalEl.addClass('supernote-modal-wide');
         this.titleEl.setText(this.getActionTitle());
 
         // Description
-        const descEl = contentEl.createEl('p', {
+        contentEl.createEl('p', {
             text: this.getActionDescription(),
-            cls: 'confirmation-modal-desc'
+            cls: 'supernote-description'
         });
-        descEl.style.marginBottom = '10px';
-        descEl.style.color = 'var(--text-muted)';
 
         // Keyboard help
-        const helpText = contentEl.createEl('p', {
-            text: 'Keyboard: ↑↓ to navigate, Space/Enter to toggle selection',
-            cls: 'setting-item-description'
+        contentEl.createEl('p', {
+            text: 'Keyboard: up/down to navigate, space/enter to toggle selection',
+            cls: 'supernote-help-text'
         });
-        helpText.style.marginBottom = '15px';
-        helpText.style.fontSize = '0.85em';
-        helpText.style.fontStyle = 'italic';
 
         // Scrollable table container
-        const tableContainer = contentEl.createDiv('confirmation-table-container');
-        tableContainer.style.maxHeight = '450px';
-        tableContainer.style.overflowY = 'auto';
-        tableContainer.style.border = '1px solid var(--background-modifier-border)';
-        tableContainer.style.borderRadius = '6px';
-
+        const tableContainer = contentEl.createDiv('supernote-scroll-container');
         tableContainer.appendChild(this.createNotesTable());
 
         // Button container
-        const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-        buttonContainer.style.marginTop = '20px';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.justifyContent = 'space-between';
-        buttonContainer.style.flexWrap = 'wrap';
+        const buttonContainer = contentEl.createDiv('supernote-button-container');
 
         // Left side buttons
-        const leftButtons = buttonContainer.createDiv();
-        leftButtons.style.display = 'flex';
-        leftButtons.style.gap = '8px';
+        const leftButtons = buttonContainer.createDiv('supernote-button-group');
 
         this.selectAllBtn = leftButtons.createEl('button', {
-            text: 'Select All',
+            text: 'Select all',
             cls: 'mod-muted'
         });
         this.selectAllBtn.onclick = () => this.selectAll();
 
         this.deselectAllBtn = leftButtons.createEl('button', {
-            text: 'Deselect All',
+            text: 'Deselect all',
             cls: 'mod-muted'
         });
         this.deselectAllBtn.onclick = () => this.deselectAll();
@@ -115,17 +97,14 @@ export class ConfirmationModal extends Modal {
         // Trash All Selected button (only for import)
         if (this.actionType === 'import') {
             this.trashAllBtn = leftButtons.createEl('button', {
-                text: 'Trash Selected',
-                cls: 'mod-warning'
+                text: 'Trash selected',
+                cls: 'mod-warning supernote-text-error'
             });
-            this.trashAllBtn.style.color = 'var(--text-error)';
             this.trashAllBtn.onclick = () => this.handleTrashAllSelected();
         }
 
         // Right side buttons
-        const rightButtons = buttonContainer.createDiv();
-        rightButtons.style.display = 'flex';
-        rightButtons.style.gap = '8px';
+        const rightButtons = buttonContainer.createDiv('supernote-button-group');
 
         const cancelButton = rightButtons.createEl('button', { text: 'Cancel' });
         cancelButton.onclick = () => {
@@ -151,8 +130,7 @@ export class ConfirmationModal extends Modal {
 
     private createNotesTable(): HTMLTableElement {
         const table = document.createElement('table');
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
+        table.addClass('supernote-table');
 
         // Determine if we should show the status column
         const showStatusColumn = this.actionType === 'update' && this.lastSync && this.localNotes;
@@ -160,7 +138,7 @@ export class ConfirmationModal extends Modal {
         // Header
         const thead = table.createTHead();
         const headerRow = thead.insertRow();
-        
+
         const headers = showStatusColumn
             ? ['', 'Name', 'Path', 'Modified', 'Pages', 'Size', 'Status']
             : ['', 'Name', 'Path', 'Modified', 'Pages', 'Size'];
@@ -168,22 +146,9 @@ export class ConfirmationModal extends Modal {
         headers.forEach((headerText, index) => {
             const th = document.createElement('th');
             th.textContent = headerText;
-            th.style.textAlign = index === 0 ? 'center' : 'left';
-            th.style.padding = '10px 12px';
-            th.style.borderBottom = '2px solid var(--background-modifier-border)';
-            th.style.fontWeight = '600';
-            th.style.fontSize = '0.85em';
-            th.style.position = 'sticky';
-            th.style.top = '0';
-            th.style.backgroundColor = 'var(--background-primary)';
-            th.style.zIndex = '10';
-            
-            if (headerText) {
-                th.style.textTransform = 'uppercase';
-                th.style.letterSpacing = '0.5px';
-                th.style.color = 'var(--text-muted)';
+            if (index === 0) {
+                th.addClass('center');
             }
-            
             headerRow.appendChild(th);
         });
 
@@ -194,75 +159,41 @@ export class ConfirmationModal extends Modal {
         this.notes.forEach((note, index) => {
             const row = tbody.insertRow();
             this.tableRows.push(row);
-            row.style.cursor = 'pointer';
-            row.style.transition = 'background-color 0.15s ease';
 
             // Checkbox + Trash cell
             const checkboxCell = row.insertCell();
-            checkboxCell.style.padding = '10px 12px';
-            checkboxCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            checkboxCell.style.textAlign = 'center';
-            checkboxCell.style.width = '70px';
+            checkboxCell.addClass('supernote-cell-checkbox');
 
-            const cellWrapper = document.createElement('div');
-            cellWrapper.style.display = 'flex';
-            cellWrapper.style.gap = '8px';
-            cellWrapper.style.alignItems = 'center';
-            cellWrapper.style.justifyContent = 'center';
+            const cellWrapper = checkboxCell.createDiv('supernote-checkbox-wrapper');
 
             // Checkbox
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = true;
             checkbox.value = note.id;
-            checkbox.style.cursor = 'pointer';
-            checkbox.style.width = '16px';
-            checkbox.style.height = '16px';
+            checkbox.addClass('supernote-checkbox');
             checkbox.onchange = () => this.toggleSelection(note.id);
             cellWrapper.appendChild(checkbox);
 
             // Trash icon (hidden by default)
-            const trashIcon = document.createElement('span');
-            trashIcon.style.cursor = 'pointer';
-            trashIcon.style.color = 'var(--text-muted)';
-            trashIcon.style.opacity = '0.6';
-            trashIcon.style.visibility = 'hidden';
-            trashIcon.style.transition = 'opacity 0.15s, color 0.15s';
+            const trashIcon = cellWrapper.createSpan('supernote-trash-icon');
             trashIcon.setAttribute('data-trash-icon', 'true');
             trashIcon.setAttribute('aria-label', 'Exclude from future syncs');
-            
-            trashIcon.onmouseenter = () => {
-                trashIcon.style.opacity = '1';
-                trashIcon.style.color = 'var(--text-error)';
-            };
-            trashIcon.onmouseleave = () => {
-                trashIcon.style.opacity = '0.6';
-                trashIcon.style.color = 'var(--text-muted)';
-            };
             trashIcon.onclick = (e) => {
                 e.stopPropagation();
                 this.handleTrash(note.id);
             };
             setIcon(trashIcon, 'trash-2');
-            cellWrapper.appendChild(trashIcon);
-
-            checkboxCell.appendChild(cellWrapper);
 
             // Row hover handlers
             row.onmouseenter = () => {
                 if (this.currentRowIndex !== index) {
-                    row.style.backgroundColor = 'var(--background-secondary)';
+                    row.addClass('is-selected');
                 }
-                const icon = row.querySelector('[data-trash-icon="true"]') as HTMLElement;
-                if (icon) icon.style.visibility = 'visible';
             };
             row.onmouseleave = () => {
                 if (this.currentRowIndex !== index) {
-                    row.style.backgroundColor = '';
-                }
-                if (this.currentRowIndex !== index) {
-                    const icon = row.querySelector('[data-trash-icon="true"]') as HTMLElement;
-                    if (icon) icon.style.visibility = 'hidden';
+                    row.removeClass('is-selected');
                 }
             };
 
@@ -281,38 +212,27 @@ export class ConfirmationModal extends Modal {
             // Name cell
             const nameCell = row.insertCell();
             nameCell.textContent = note.name;
-            nameCell.style.padding = '10px 12px';
-            nameCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            nameCell.style.fontWeight = '500';
+            nameCell.addClass('supernote-cell-name');
 
             // Path cell
             const pathCell = row.insertCell();
             pathCell.textContent = this.truncatePath(note.path);
             pathCell.title = note.path;
-            pathCell.style.padding = '10px 12px';
-            pathCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            pathCell.style.color = 'var(--text-muted)';
-            pathCell.style.fontSize = '0.9em';
+            pathCell.addClass('supernote-cell-path');
 
             // Modified date cell
             const dateCell = row.insertCell();
             dateCell.textContent = this.formatDate(note.modifiedAt);
-            dateCell.style.padding = '10px 12px';
-            dateCell.style.borderBottom = '1px solid var(--background-modifier-border)';
 
             // Pages cell
             const pagesCell = row.insertCell();
             pagesCell.textContent = note.pageCount?.toString() || '-';
-            pagesCell.style.padding = '10px 12px';
-            pagesCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            pagesCell.style.textAlign = 'center';
+            pagesCell.addClass('supernote-cell-center');
 
             // Size cell
             const sizeCell = row.insertCell();
             sizeCell.textContent = formatFileSize(note.size);
-            sizeCell.style.padding = '10px 12px';
-            sizeCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            sizeCell.style.textAlign = 'right';
+            sizeCell.addClass('supernote-cell-right');
 
             // Status cell (for update mode)
             if (showStatusColumn) {
@@ -322,14 +242,11 @@ export class ConfirmationModal extends Modal {
 
                 if (isModified) {
                     statusCell.textContent = 'Modified';
-                    statusCell.style.color = 'var(--text-warning)';
-                    statusCell.style.fontWeight = '600';
+                    statusCell.addClass('supernote-status-modified');
                 } else {
                     statusCell.textContent = 'Unmodified';
-                    statusCell.style.color = 'var(--text-muted)';
+                    statusCell.addClass('supernote-text-muted');
                 }
-                statusCell.style.padding = '10px 12px';
-                statusCell.style.borderBottom = '1px solid var(--background-modifier-border)';
             }
         });
 
@@ -374,19 +291,15 @@ export class ConfirmationModal extends Modal {
     private setCurrentRow(index: number): void {
         // Remove highlight from previous row
         if (this.tableRows[this.currentRowIndex]) {
-            this.tableRows[this.currentRowIndex].style.backgroundColor = '';
-            const prevIcon = this.tableRows[this.currentRowIndex].querySelector('[data-trash-icon="true"]') as HTMLElement;
-            if (prevIcon) prevIcon.style.visibility = 'hidden';
+            this.tableRows[this.currentRowIndex].removeClass('is-selected');
         }
 
         this.currentRowIndex = index;
 
         // Highlight new current row
         if (this.tableRows[this.currentRowIndex]) {
-            this.tableRows[this.currentRowIndex].style.backgroundColor = 'var(--background-modifier-hover)';
+            this.tableRows[this.currentRowIndex].addClass('is-selected');
             this.tableRows[this.currentRowIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            const currentIcon = this.tableRows[this.currentRowIndex].querySelector('[data-trash-icon="true"]') as HTMLElement;
-            if (currentIcon) currentIcon.style.visibility = 'visible';
         }
     }
 
@@ -453,7 +366,7 @@ export class ConfirmationModal extends Modal {
         this.onTrash(noteId);
         this.selectedNotes.delete(noteId);
         this.notes = this.notes.filter(n => n.id !== noteId);
-        
+
         // Find and remove the row
         const rowIndex = this.tableRows.findIndex(row => {
             const checkbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement;
@@ -491,7 +404,7 @@ export class ConfirmationModal extends Modal {
 
         // Create confirmation modal
         const confirmModal = new Modal(this.app);
-        confirmModal.titleEl.setText('Confirm Trash Selected');
+        confirmModal.titleEl.setText('Confirm trash selected');
 
         const { contentEl } = confirmModal;
         contentEl.empty();
@@ -504,17 +417,13 @@ export class ConfirmationModal extends Modal {
             cls: 'setting-item-description'
         });
 
-        const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.justifyContent = 'flex-end';
-        buttonContainer.style.marginTop = '20px';
+        const buttonContainer = contentEl.createDiv('modal-button-container supernote-buttons-right');
 
         const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
         cancelBtn.onclick = () => confirmModal.close();
 
         const confirmBtn = buttonContainer.createEl('button', {
-            text: 'Trash All',
+            text: 'Trash all',
             cls: 'mod-warning'
         });
         confirmBtn.onclick = () => {
@@ -523,7 +432,7 @@ export class ConfirmationModal extends Modal {
             this.selectedNotes.clear();
 
             // Rebuild the table
-            const tableContainer = this.contentEl.querySelector('.confirmation-table-container');
+            const tableContainer = this.contentEl.querySelector('.supernote-scroll-container');
             if (tableContainer) {
                 tableContainer.empty();
                 if (this.notes.length > 0) {
@@ -545,10 +454,10 @@ export class ConfirmationModal extends Modal {
 
     private getActionTitle(): string {
         switch (this.actionType) {
-            case 'import': return 'Import New Notes';
-            case 'update': return 'Update Existing Notes';
-            case 'export': return 'Bulk Export All Notes';
-            default: return 'Confirm Action';
+            case 'import': return 'Import new notes';
+            case 'update': return 'Update existing notes';
+            case 'export': return 'Bulk export all notes';
+            default: return 'Confirm action';
         }
     }
 

@@ -590,22 +590,22 @@ function buildPDF(pageImages: Uint8Array[], width: number, height: number): Uint
  */
 export async function convertNoteToPdf(noteData: ArrayBuffer): Promise<ArrayBuffer> {
     // Diagnostic logging
-    console.log(`[note-parser] Converting .note file: ${noteData.byteLength} bytes`);
-    
+    console.debug(`[note-parser] Converting .note file: ${noteData.byteLength} bytes`);
+
     const reader = new BinaryReader(noteData);
-    
+
     // Validate file before parsing
     validateNoteFile(reader);
-    
+
     const notebook = parseNotebook(reader);
-    console.log(`[note-parser] Parsed notebook: ${notebook.pages.length} pages, ${notebook.width}x${notebook.height}`);
+    console.debug(`[note-parser] Parsed notebook: ${notebook.pages.length} pages, ${notebook.width}x${notebook.height}`);
 
     const pageImages: Uint8Array[] = [];
 
     for (let i = 0; i < notebook.pages.length; i++) {
         const page = notebook.pages[i];
         try {
-            console.log(`[note-parser] Rendering page ${i + 1}/${notebook.pages.length}, layers: ${page.layers.map(l => l.protocol).join(', ')}`);
+            console.debug(`[note-parser] Rendering page ${i + 1}/${notebook.pages.length}, layers: ${page.layers.map(l => l.protocol).join(', ')}`);
             const rgba = await renderPage(reader, page, notebook.width, notebook.height);
             const rgb = rgbaToRgb(rgba, notebook.width, notebook.height);
             pageImages.push(rgb);
@@ -616,7 +616,7 @@ export async function convertNoteToPdf(noteData: ArrayBuffer): Promise<ArrayBuff
     }
 
     const pdfBytes = buildPDF(pageImages, notebook.width, notebook.height);
-    console.log(`[note-parser] Generated PDF: ${pdfBytes.length} bytes`);
+    console.debug(`[note-parser] Generated PDF: ${pdfBytes.length} bytes`);
     return pdfBytes.buffer;
 }
 

@@ -1,4 +1,4 @@
-import { App, Modal } from 'obsidian';
+import { App, Modal, Setting } from 'obsidian';
 import { SupernoteFile, SyncStatus } from '../api/types';
 import { formatFileSize } from '../utils/markdown';
 
@@ -18,53 +18,38 @@ export class SyncStatusModal extends Modal {
         contentEl.empty();
 
         // Modal styling
-        this.modalEl.style.width = '80%';
-        this.modalEl.style.maxWidth = '1000px';
-        this.titleEl.setText('Sync Status');
+        this.modalEl.addClass('supernote-modal-large');
+        this.titleEl.setText('Sync status');
 
         // Summary section
         const total = this.status.new.length + this.status.updated.length + this.status.synced.length;
-        const summaryEl = contentEl.createEl('div', { cls: 'sync-status-summary' });
-        summaryEl.style.marginBottom = '20px';
-        summaryEl.style.padding = '15px';
-        summaryEl.style.backgroundColor = 'var(--background-secondary)';
-        summaryEl.style.borderRadius = '8px';
+        const summaryEl = contentEl.createDiv('supernote-summary');
 
-        const flexContainer = summaryEl.createDiv();
-        flexContainer.style.display = 'flex';
-        flexContainer.style.justifyContent = 'space-around';
-        flexContainer.style.textAlign = 'center';
-
-        this.createStatBox(flexContainer, String(total), 'Total Notes');
-        this.createStatBox(flexContainer, String(this.status.new.length), 'New', 'var(--text-accent)');
-        this.createStatBox(flexContainer, String(this.status.updated.length), 'Updated', 'var(--color-orange)');
-        this.createStatBox(flexContainer, String(this.status.synced.length), 'Synced', 'var(--color-green)');
+        this.createStatBox(summaryEl, String(total), 'Total notes');
+        this.createStatBox(summaryEl, String(this.status.new.length), 'New', 'supernote-text-accent');
+        this.createStatBox(summaryEl, String(this.status.updated.length), 'Updated', 'supernote-text-orange');
+        this.createStatBox(summaryEl, String(this.status.synced.length), 'Synced', 'supernote-text-green');
 
         // Scrollable content area
-        const scrollContainer = contentEl.createDiv('sync-status-scroll');
-        scrollContainer.style.maxHeight = '500px';
-        scrollContainer.style.overflowY = 'auto';
+        const scrollContainer = contentEl.createDiv('supernote-scroll-container supernote-scroll-tall');
 
-        // New Notes Section
+        // New notes section
         if (this.status.new.length > 0) {
-            this.createSection(scrollContainer, 'New Notes', this.status.new, 'var(--text-accent)');
+            this.createSection(scrollContainer, 'New notes', this.status.new, 'border-accent');
         }
 
-        // Updated Notes Section
+        // Updated notes section
         if (this.status.updated.length > 0) {
-            this.createSection(scrollContainer, 'Updated Notes', this.status.updated, 'var(--color-orange)');
+            this.createSection(scrollContainer, 'Updated notes', this.status.updated, 'border-orange');
         }
 
-        // Synced Notes Section (collapsed by default)
+        // Synced notes section (collapsed by default)
         if (this.status.synced.length > 0) {
-            this.createCollapsibleSection(scrollContainer, 'Already Synced', this.status.synced, 'var(--color-green)');
+            this.createCollapsibleSection(scrollContainer, 'Already synced', this.status.synced, 'border-green');
         }
 
         // Close button
-        const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-        buttonContainer.style.marginTop = '20px';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.justifyContent = 'flex-end';
+        const buttonContainer = contentEl.createDiv('modal-button-container supernote-buttons-right');
 
         const closeButton = buttonContainer.createEl('button', { text: 'Close' });
         closeButton.onclick = () => this.close();
@@ -74,15 +59,14 @@ export class SyncStatusModal extends Modal {
         container: HTMLElement,
         title: string,
         notes: SupernoteFile[],
-        accentColor: string
+        borderClass: string
     ): void {
-        const section = container.createDiv('sync-status-section');
-        section.style.marginBottom = '20px';
+        const section = container.createDiv('supernote-section');
 
-        const header = section.createEl('h3', { text: `${title} (${notes.length})` });
-        header.style.borderLeft = `4px solid ${accentColor}`;
-        header.style.paddingLeft = '10px';
-        header.style.marginBottom = '10px';
+        new Setting(section)
+            .setHeading()
+            .setName(`${title} (${notes.length})`)
+            .setClass(`supernote-section-header ${borderClass}`);
 
         section.appendChild(this.createNotesTable(notes));
     }
@@ -91,33 +75,28 @@ export class SyncStatusModal extends Modal {
         container: HTMLElement,
         title: string,
         notes: SupernoteFile[],
-        accentColor: string
+        borderClass: string
     ): void {
-        const section = container.createDiv('sync-status-section');
-        section.style.marginBottom = '20px';
+        const section = container.createDiv('supernote-section');
 
-        const header = section.createEl('h3', { text: `▶ ${title} (${notes.length})` });
-        header.style.borderLeft = `4px solid ${accentColor}`;
-        header.style.paddingLeft = '10px';
-        header.style.marginBottom = '10px';
-        header.style.cursor = 'pointer';
-        header.style.userSelect = 'none';
+        const headerSetting = new Setting(section)
+            .setHeading()
+            .setName(`${title} (${notes.length}) - click to expand`)
+            .setClass(`supernote-section-header ${borderClass} supernote-collapsible-header`);
 
-        const tableContainer = section.createDiv();
-        tableContainer.style.display = 'none';
+        const tableContainer = section.createDiv('supernote-collapsible-content');
         tableContainer.appendChild(this.createNotesTable(notes));
 
-        header.addEventListener('click', () => {
-            const isHidden = tableContainer.style.display === 'none';
-            tableContainer.style.display = isHidden ? 'block' : 'none';
-            header.setText(`${isHidden ? '▼' : '▶'} ${title} (${notes.length})`);
-        });
+        headerSetting.settingEl.onclick = () => {
+            tableContainer.toggleClass('is-open', !tableContainer.hasClass('is-open'));
+            const isOpen = tableContainer.hasClass('is-open');
+            headerSetting.setName(isOpen ? `${title} (${notes.length})` : `${title} (${notes.length}) - click to expand`);
+        };
     }
 
     private createNotesTable(notes: SupernoteFile[]): HTMLTableElement {
         const table = document.createElement('table');
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
+        table.addClass('supernote-table');
 
         // Header
         const thead = table.createTHead();
@@ -127,14 +106,6 @@ export class SyncStatusModal extends Modal {
         headers.forEach(headerText => {
             const th = document.createElement('th');
             th.textContent = headerText;
-            th.style.textAlign = 'left';
-            th.style.padding = '8px 12px';
-            th.style.borderBottom = '2px solid var(--background-modifier-border)';
-            th.style.fontWeight = '600';
-            th.style.fontSize = '0.85em';
-            th.style.textTransform = 'uppercase';
-            th.style.letterSpacing = '0.5px';
-            th.style.color = 'var(--text-muted)';
             headerRow.appendChild(th);
         });
 
@@ -142,45 +113,34 @@ export class SyncStatusModal extends Modal {
         const tbody = table.createTBody();
         notes.forEach((note, index) => {
             const row = tbody.insertRow();
-            row.style.backgroundColor = index % 2 === 0 
-                ? 'transparent' 
-                : 'var(--background-secondary-alt)';
+            if (index % 2 === 1) {
+                row.addClass('is-striped');
+            }
 
             // Name
             const nameCell = row.insertCell();
             nameCell.textContent = note.name;
-            nameCell.style.padding = '10px 12px';
-            nameCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            nameCell.style.fontWeight = '500';
+            nameCell.addClass('supernote-cell-name');
 
             // Path
             const pathCell = row.insertCell();
             pathCell.textContent = this.truncatePath(note.path);
-            pathCell.title = note.path; // Full path on hover
-            pathCell.style.padding = '10px 12px';
-            pathCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            pathCell.style.color = 'var(--text-muted)';
-            pathCell.style.fontSize = '0.9em';
+            pathCell.title = note.path;
+            pathCell.addClass('supernote-cell-path');
 
             // Modified date
             const dateCell = row.insertCell();
             dateCell.textContent = this.formatDate(note.modifiedAt);
-            dateCell.style.padding = '10px 12px';
-            dateCell.style.borderBottom = '1px solid var(--background-modifier-border)';
 
             // Pages
             const pagesCell = row.insertCell();
             pagesCell.textContent = note.pageCount?.toString() || '-';
-            pagesCell.style.padding = '10px 12px';
-            pagesCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            pagesCell.style.textAlign = 'center';
+            pagesCell.addClass('supernote-cell-center');
 
             // Size
             const sizeCell = row.insertCell();
             sizeCell.textContent = formatFileSize(note.size);
-            sizeCell.style.padding = '10px 12px';
-            sizeCell.style.borderBottom = '1px solid var(--background-modifier-border)';
-            sizeCell.style.textAlign = 'right';
+            sizeCell.addClass('supernote-cell-right');
         });
 
         return table;
@@ -202,14 +162,10 @@ export class SyncStatusModal extends Modal {
         return `${start}...${end}`;
     }
 
-    private createStatBox(container: HTMLElement, value: string, label: string, color?: string): void {
-        const box = container.createDiv();
-        const valueEl = box.createDiv({ text: value });
-        valueEl.style.fontSize = '2em';
-        valueEl.style.fontWeight = 'bold';
-        if (color) valueEl.style.color = color;
-        const labelEl = box.createDiv({ text: label });
-        labelEl.style.color = 'var(--text-muted)';
+    private createStatBox(container: HTMLElement, value: string, label: string, colorClass?: string): void {
+        const box = container.createDiv('supernote-summary-item');
+        box.createDiv({ text: value, cls: `supernote-summary-count ${colorClass ?? ''}` });
+        box.createDiv({ text: label, cls: 'supernote-summary-label' });
     }
 
     onClose(): void {

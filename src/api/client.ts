@@ -242,7 +242,7 @@ export class SupernoteAPIClient {
             }).join('/');
             const fullUrl = `${this.baseURL}${encodedPath}`;
             
-            console.log(`[client] Downloading: ${fullUrl}`);
+            console.debug(`[client] Downloading: ${fullUrl}`);
             
             const params: RequestUrlParam = {
                 url: fullUrl,
@@ -252,7 +252,7 @@ export class SupernoteAPIClient {
 
             const response = await requestUrl(params);
             
-            console.log(`[client] Response for ${filePath}: status=${response.status}, size=${response.arrayBuffer.byteLength}, content-type=${response.headers['content-type'] || 'unknown'}`);
+            console.debug(`[client] Response for ${filePath}: status=${response.status}, size=${response.arrayBuffer.byteLength}, content-type=${response.headers['content-type'] || 'unknown'}`);
             
             if (response.status >= 400) {
                 throw new Error(`HTTP ${response.status}: Failed to download ${filePath}`);

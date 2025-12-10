@@ -1,14 +1,12 @@
-import { Vault, TFolder, normalizePath } from 'obsidian';
+import { Vault, TFolder, TFile, normalizePath } from 'obsidian';
 import { SupernoteAPIClient } from '../api/client';
 import { PdfConverter } from '../api/converter';
 import { SupernoteFile, ExportOptions, UpdateOptions } from '../api/types';
 import { ImportMode, ConverterMode } from '../settings';
-import { generateMarkdown, generateFilename, generatePdfFilename, updateFrontmatter, applyFilenameTemplate } from '../utils/markdown';
+import { generateMarkdown, generateFilename, generatePdfFilename, updateFrontmatter } from '../utils/markdown';
 import { parseFrontmatter } from './matcher';
-
-// Node.js APIs available in Electron
-const fs = require('fs');
-const path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Concurrency limit for parallel downloads
 const MAX_CONCURRENT_DOWNLOADS = 6;
@@ -21,7 +19,7 @@ async function parallelLimit<T, R>(
     limit: number,
     fn: (item: T, index: number) => Promise<R>
 ): Promise<R[]> {
-    const results: R[] = new Array(items.length);
+    const results: R[] = new Array(items.length) as R[];
     let currentIndex = 0;
 
     async function worker(): Promise<void> {
@@ -64,7 +62,7 @@ export interface ImportResult {
 
 /**
  * NoteImporter handles importing and updating Supernote files in the vault.
- * 
+ *
  * Supports three import modes:
  * - pdf-only: Just imports the PDF files (simplest, cleanest)
  * - markdown-with-pdf: Creates markdown files with PDF attachments
@@ -173,7 +171,7 @@ export class NoteImporter {
 
     /**
      * Import notes using batch mode (CLI only, pdf-only mode).
-     * 
+     *
      * Flow:
      * 1. Download all .note files in parallel to a temp directory
      * 2. Run CLI converter once on the entire directory
@@ -190,7 +188,7 @@ export class NoteImporter {
 
         if (total === 0) return 0;
 
-        console.log(`[importer] Starting batch import of ${total} notes (${MAX_CONCURRENT_DOWNLOADS} concurrent downloads)`);
+        console.debug(`[importer] Starting batch import of ${total} notes (${MAX_CONCURRENT_DOWNLOADS} concurrent downloads)`);
 
         // Create temp directories
         // Input dir needs to exist for us to write .note files
@@ -201,7 +199,7 @@ export class NoteImporter {
         try {
             // Phase 1: Download all .note files in parallel
             onProgress(0, total, 0, 0, `Downloading ${total} notes...`);
-            console.log(`[importer] Phase 1: Downloading ${total} notes in parallel to ${inputTempDir}`);
+            console.debug(`[importer] Phase 1: Downloading ${total} notes in parallel to ${inputTempDir}`);
 
             const downloadStartTime = Date.now();
             let downloadedCount = 0;
@@ -215,14 +213,14 @@ export class NoteImporter {
 
                     // Compute relative path (preserving folder structure)
                     const relativePath = this.getRelativeNotePath(note);
-                    
+
                     // Write to temp directory
                     await this.pdfConverter.writeNoteToTempDir(inputTempDir, relativePath, noteData);
-                    
+
                     downloadedCount++;
                     onProgress(downloadedCount, total, 0, 0, `Downloaded ${downloadedCount}/${total}: ${note.name}`);
-                    console.log(`[importer] Downloaded (${downloadedCount}/${total}): ${relativePath}`);
-                    
+                    console.debug(`[importer] Downloaded (${downloadedCount}/${total}): ${relativePath}`);
+
                     return { note, relativePath } as DownloadResult;
                 } catch (error) {
                     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -232,7 +230,7 @@ export class NoteImporter {
             });
 
             const downloadTimeMs = Date.now() - downloadStartTime;
-            
+
             // Separate successful downloads from failures
             const downloadedNotes: Array<{ note: SupernoteFile; relativePath: string }> = [];
             for (const result of downloadResults) {
@@ -243,7 +241,7 @@ export class NoteImporter {
                 }
             }
 
-            console.log(`[importer] Downloaded ${downloadedNotes.length}/${total} notes in ${downloadTimeMs}ms (${Math.round(downloadTimeMs / total)}ms avg per file)`);
+            console.debug(`[importer] Downloaded ${downloadedNotes.length}/${total} notes in ${downloadTimeMs}ms (${Math.round(downloadTimeMs / total)}ms avg per file)`);
 
             if (downloadedNotes.length === 0) {
                 console.error('[importer] No notes downloaded successfully');
@@ -252,22 +250,22 @@ export class NoteImporter {
 
             // Phase 2: Convert all notes at once
             onProgress(downloadedNotes.length, total, 0, failureCount, 'Converting to PDF...');
-            console.log(`[importer] Phase 2: Converting ${downloadedNotes.length} notes`);
+            console.debug(`[importer] Phase 2: Converting ${downloadedNotes.length} notes`);
 
             const conversionResult = await this.pdfConverter.convertDirectory(inputTempDir, outputTempDir);
 
             if (!conversionResult.success) {
                 console.error(`[importer] Batch conversion failed: ${conversionResult.error}`);
                 // Fall back to single-file mode
-                console.log('[importer] Falling back to single-file mode');
+                console.debug('[importer] Falling back to single-file mode');
                 return this.importNotesWithProgressSingle(notes, onProgress);
             }
 
-            console.log(`[importer] Conversion complete: ${conversionResult.fileCount} PDFs in ${conversionResult.conversionTimeMs}ms`);
+            console.debug(`[importer] Conversion complete: ${conversionResult.fileCount} PDFs in ${conversionResult.conversionTimeMs}ms`);
 
             // Phase 3: Copy PDFs to vault
             onProgress(downloadedNotes.length, total, 0, failureCount, 'Importing to vault...');
-            console.log(`[importer] Phase 3: Copying PDFs to vault`);
+            console.debug(`[importer] Phase 3: Copying PDFs to vault`);
 
             for (let i = 0; i < downloadedNotes.length; i++) {
                 const { note, relativePath } = downloadedNotes[i];
@@ -288,7 +286,7 @@ export class NoteImporter {
                     // Read PDF data
                     const pdfBuffer = await fs.promises.readFile(pdfTempPath);
                     const pdfData = pdfBuffer.buffer.slice(
-                        pdfBuffer.byteOffset, 
+                        pdfBuffer.byteOffset,
                         pdfBuffer.byteOffset + pdfBuffer.byteLength
                     );
 
@@ -304,13 +302,13 @@ export class NoteImporter {
 
                     // Write to vault
                     const existingPdf = this.vault.getAbstractFileByPath(pdfVaultPath);
-                    if (existingPdf) {
-                        await this.vault.modifyBinary(existingPdf as any, pdfData);
+                    if (existingPdf instanceof TFile) {
+                        await this.vault.modifyBinary(existingPdf, pdfData);
                     } else {
                         await this.vault.createBinary(pdfVaultPath, pdfData);
                     }
 
-                    console.log(`[importer] Imported: ${pdfVaultPath}`);
+                    console.debug(`[importer] Imported: ${pdfVaultPath}`);
                     successCount++;
                 } catch (error) {
                     console.error(`[importer] Failed to import ${note.name} to vault:`, error);
@@ -318,12 +316,12 @@ export class NoteImporter {
                 }
             }
 
-            console.log(`[importer] Batch import complete: ${successCount} succeeded, ${failureCount} failed`);
+            console.debug(`[importer] Batch import complete: ${successCount} succeeded, ${failureCount} failed`);
             return successCount;
 
         } finally {
             // Phase 4: Cleanup temp directories
-            console.log('[importer] Phase 4: Cleaning up temp directories');
+            console.debug('[importer] Phase 4: Cleaning up temp directories');
             await this.pdfConverter.cleanupTempDir(inputTempDir);
             await this.pdfConverter.cleanupTempDir(outputTempDir);
         }
@@ -335,12 +333,12 @@ export class NoteImporter {
     private getRelativeNotePath(note: SupernoteFile): string {
         // Remove leading /Note/ prefix
         const withoutNotePrefix = note.path.replace(/^\/Note\/?/, '');
-        
+
         // If preserving folder structure, use the full relative path
         if (this.preserveFolderStructure) {
             return withoutNotePrefix;
         }
-        
+
         // Otherwise just use the filename
         const lastSlash = withoutNotePrefix.lastIndexOf('/');
         return lastSlash >= 0 ? withoutNotePrefix.substring(lastSlash + 1) : withoutNotePrefix;
@@ -370,15 +368,15 @@ export class NoteImporter {
     private getRelativeFolderPath(notePath: string): string {
         // Remove leading /Note/ or /Note prefix
         const withoutNotePrefix = notePath.replace(/^\/Note\/?/, '');
-        
+
         // Find the last slash to separate directory from filename
         const lastSlashIndex = withoutNotePrefix.lastIndexOf('/');
-        
+
         // If no slash found, file is in root - return empty string
         if (lastSlashIndex === -1) {
             return '';
         }
-        
+
         // Return everything before the last slash (the directory path)
         return withoutNotePrefix.substring(0, lastSlashIndex);
     }
@@ -387,8 +385,8 @@ export class NoteImporter {
      * Build the full vault path for a file, optionally preserving folder structure
      */
     private buildVaultPath(baseFolder: string, note: SupernoteFile, filename: string): string {
-        const normalizedBase = baseFolder.startsWith('/') 
-            ? baseFolder.slice(1) 
+        const normalizedBase = baseFolder.startsWith('/')
+            ? baseFolder.slice(1)
             : baseFolder;
 
         if (this.preserveFolderStructure) {
@@ -397,7 +395,7 @@ export class NoteImporter {
                 return normalizePath(`${normalizedBase}/${relativePath}/${filename}`);
             }
         }
-        
+
         return normalizePath(`${normalizedBase}/${filename}`);
     }
 
@@ -411,7 +409,7 @@ export class NoteImporter {
             const conversionResult = await this.pdfConverter.convert(noteData, note.id);
 
             if (!conversionResult.success || !conversionResult.pdfData) {
-                throw new Error(`PDF conversion failed: ${conversionResult.error || 'Unknown error'}`);
+                throw new Error(`PDF conversion failed: ${conversionResult.error ?? 'Unknown error'}`);
             }
 
             // Generate PDF filename and full vault path
@@ -426,13 +424,13 @@ export class NoteImporter {
 
             // Write PDF to vault
             const existingPdf = this.vault.getAbstractFileByPath(pdfVaultPath);
-            if (existingPdf) {
-                await this.vault.modifyBinary(existingPdf as any, conversionResult.pdfData);
+            if (existingPdf instanceof TFile) {
+                await this.vault.modifyBinary(existingPdf, conversionResult.pdfData);
             } else {
                 await this.vault.createBinary(pdfVaultPath, conversionResult.pdfData);
             }
 
-            console.log(`Imported ${note.name} as PDF (${conversionResult.pageCount} pages) in ${conversionResult.conversionTimeMs}ms`);
+            console.debug(`Imported ${note.name} as PDF (${conversionResult.pageCount} pages) in ${conversionResult.conversionTimeMs}ms`);
 
             return {
                 success: true,
@@ -463,7 +461,7 @@ export class NoteImporter {
 
             // Get thumbnail if enabled
             if (this.exportOptions.includeThumbnail) {
-                thumbnailBase64 = await this.client.getThumbnail(note.id) || undefined;
+                thumbnailBase64 = await this.client.getThumbnail(note.id) ?? undefined;
             }
 
             // Generate markdown content
@@ -481,8 +479,8 @@ export class NoteImporter {
 
             // Write file
             const existingFile = this.vault.getAbstractFileByPath(filepath);
-            if (existingFile) {
-                await this.vault.modify(existingFile as any, content);
+            if (existingFile instanceof TFile) {
+                await this.vault.modify(existingFile, content);
             } else {
                 await this.vault.create(filepath, content);
             }
@@ -511,7 +509,7 @@ export class NoteImporter {
 
             // Get thumbnail if enabled
             if (this.exportOptions.includeThumbnail) {
-                thumbnailBase64 = await this.client.getThumbnail(note.id) || undefined;
+                thumbnailBase64 = await this.client.getThumbnail(note.id) ?? undefined;
             }
 
             // Generate markdown content (no PDF path)
@@ -530,8 +528,8 @@ export class NoteImporter {
 
             // Write file
             const existingFile = this.vault.getAbstractFileByPath(filepath);
-            if (existingFile) {
-                await this.vault.modify(existingFile as any, content);
+            if (existingFile instanceof TFile) {
+                await this.vault.modify(existingFile, content);
             } else {
                 await this.vault.create(filepath, content);
             }
@@ -565,7 +563,7 @@ export class NoteImporter {
         for (let i = 0; i < notes.length; i++) {
             const note = notes[i];
             const localPath = localPaths.get(note.id);
-            
+
             onProgress(i + 1, total, successCount, failureCount, note.name);
 
             if (!localPath) {
@@ -597,11 +595,11 @@ export class NoteImporter {
 
         try {
             const file = this.vault.getAbstractFileByPath(existingPath);
-            if (!file) {
+            if (!(file instanceof TFile)) {
                 throw new Error(`File not found: ${existingPath}`);
             }
 
-            const existingContent = await this.vault.read(file as any);
+            const existingContent = await this.vault.read(file);
             const existingFrontmatter = parseFrontmatter(existingContent);
 
             let newContent: string;
@@ -617,7 +615,7 @@ export class NoteImporter {
             // Get thumbnail if needed
             let thumbnailBase64: string | undefined;
             if (this.exportOptions.includeThumbnail) {
-                thumbnailBase64 = await this.client.getThumbnail(note.id) || undefined;
+                thumbnailBase64 = await this.client.getThumbnail(note.id) ?? undefined;
             }
 
             // Apply update based on mode
@@ -634,7 +632,7 @@ export class NoteImporter {
             }
 
             // Write updated content
-            await this.vault.modify(file as any, newContent);
+            await this.vault.modify(file, newContent);
 
             return {
                 success: true,
@@ -717,7 +715,7 @@ export class NoteImporter {
         const conversionResult = await this.pdfConverter.convert(noteData, note.id);
 
         if (!conversionResult.success || !conversionResult.pdfData) {
-            throw new Error(`PDF conversion failed: ${conversionResult.error || 'Unknown error'}`);
+            throw new Error(`PDF conversion failed: ${conversionResult.error ?? 'Unknown error'}`);
         }
 
         // Step 3: Generate PDF filename and full vault path
@@ -732,13 +730,13 @@ export class NoteImporter {
 
         // Step 5: Write PDF to vault
         const existingPdf = this.vault.getAbstractFileByPath(pdfVaultPath);
-        if (existingPdf) {
-            await this.vault.modifyBinary(existingPdf as any, conversionResult.pdfData);
+        if (existingPdf instanceof TFile) {
+            await this.vault.modifyBinary(existingPdf, conversionResult.pdfData);
         } else {
             await this.vault.createBinary(pdfVaultPath, conversionResult.pdfData);
         }
 
-        console.log(`Converted ${note.name} to PDF in ${conversionResult.conversionTimeMs}ms`);
+        console.debug(`Converted ${note.name} to PDF in ${conversionResult.conversionTimeMs}ms`);
 
         return pdfVaultPath;
     }
@@ -754,19 +752,19 @@ export class NoteImporter {
     /**
      * Ensure a folder exists in the vault
      */
-    private async ensureFolderExists(path: string): Promise<void> {
-        const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+    private async ensureFolderExists(folderPath: string): Promise<void> {
+        const normalizedPath = folderPath.startsWith('/') ? folderPath.slice(1) : folderPath;
         const folder = this.vault.getAbstractFileByPath(normalizedPath);
-        
+
         if (!folder) {
             // Create folder and any parent folders
             const parts = normalizedPath.split('/');
             let currentPath = '';
-            
+
             for (const part of parts) {
                 currentPath = currentPath ? `${currentPath}/${part}` : part;
                 const existing = this.vault.getAbstractFileByPath(currentPath);
-                
+
                 if (!existing) {
                     await this.vault.createFolder(currentPath);
                 } else if (!(existing instanceof TFolder)) {

@@ -1,6 +1,6 @@
 /**
  * PDF Converter for Supernote .note files
- * 
+ *
  * Supports two modes:
  * 1. CLI mode (recommended): Uses the supernote_pdf Rust binary for reliable conversion
  * 2. Built-in mode: Uses a TypeScript implementation (less reliable, but no external dependency)
@@ -8,12 +8,10 @@
 
 import { convertNoteToPdf, getNoteInfo } from './note-parser';
 import { ConverterMode } from '../settings';
-
-// Use Node.js APIs available in Electron
-const { exec, execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import * as childProcess from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 /**
  * Common locations to search for supernote_pdf binary
@@ -61,12 +59,22 @@ export interface NoteInfo {
     height: number;
 }
 
+interface ExecResult {
+    stdout: string;
+    stderr: string;
+}
+
+interface DirEntry {
+    name: string;
+    isDirectory(): boolean;
+}
+
 /**
  * Promisified exec
  */
-function execAsync(cmd: string): Promise<{ stdout: string; stderr: string }> {
+function execAsync(cmd: string): Promise<ExecResult> {
     return new Promise((resolve, reject) => {
-        exec(cmd, (error: Error | null, stdout: string, stderr: string) => {
+        childProcess.exec(cmd, (error: Error | null, stdout: string, stderr: string) => {
             if (error) {
                 reject(error);
             } else {
@@ -81,7 +89,7 @@ function execAsync(cmd: string): Promise<{ stdout: string; stderr: string }> {
  */
 function findInPath(): string | null {
     try {
-        const result = execSync('which supernote_pdf', { encoding: 'utf8', timeout: 5000 });
+        const result = childProcess.execSync('which supernote_pdf', { encoding: 'utf8', timeout: 5000 });
         return result.trim() || null;
     } catch {
         return null;
@@ -123,7 +131,7 @@ function findCliTool(configuredPath?: string): string | null {
 
 /**
  * PdfConverter handles converting .note files to PDF.
- * 
+ *
  * Supports two modes:
  * - 'cli': Uses the supernote_pdf Rust binary (recommended, more reliable)
  * - 'builtin': Uses TypeScript implementation (no external dependency, less reliable)
@@ -136,12 +144,12 @@ export class PdfConverter {
     constructor(mode: ConverterMode = 'cli', cliPath: string = '') {
         this.mode = mode;
         this.cliPath = cliPath;
-        
+
         // Auto-detect CLI path if in CLI mode
         if (mode === 'cli') {
             this.resolvedCliPath = findCliTool(cliPath);
             if (this.resolvedCliPath) {
-                console.log(`[converter] Found CLI tool at: ${this.resolvedCliPath}`);
+                console.debug(`[converter] Found CLI tool at: ${this.resolvedCliPath}`);
             }
         }
     }
@@ -188,7 +196,7 @@ export class PdfConverter {
             return 'built-in v1.0.0 (TypeScript implementation - experimental)';
         }
 
-        const cliPath = this.resolvedCliPath || findCliTool(this.cliPath);
+        const cliPath = this.resolvedCliPath ?? findCliTool(this.cliPath);
         if (!cliPath) {
             return 'CLI not found - install supernote_pdf or set path in settings';
         }
@@ -216,8 +224,8 @@ export class PdfConverter {
      * @returns ConversionResult with the PDF data or error information
      */
     async convert(noteData: ArrayBuffer, noteId?: string): Promise<ConversionResult> {
-        console.log(`[converter] Mode: ${this.mode}, CLI path: ${this.cliPath || '(not set)'}`);
-        
+        console.debug(`[converter] Mode: ${this.mode}, CLI path: ${this.cliPath || '(not set)'}`);
+
         if (this.mode === 'cli') {
             return this.convertWithCli(noteData, noteId);
         } else {
@@ -230,11 +238,11 @@ export class PdfConverter {
      */
     private async convertWithCli(noteData: ArrayBuffer, noteId?: string): Promise<ConversionResult> {
         const startTime = Date.now();
-        const fileId = noteId || 'unknown';
+        const fileId = noteId ?? 'unknown';
 
         // Try to find CLI tool if not already resolved
-        const cliPath = this.resolvedCliPath || findCliTool(this.cliPath);
-        
+        const cliPath = this.resolvedCliPath ?? findCliTool(this.cliPath);
+
         if (!cliPath) {
             console.error('[converter-cli] CLI tool not found');
             console.error('[converter-cli] Searched: configured path, PATH, and common locations');
@@ -245,7 +253,7 @@ export class PdfConverter {
                 conversionTimeMs: Date.now() - startTime,
             };
         }
-        
+
         // Cache the resolved path
         this.resolvedCliPath = cliPath;
 
@@ -259,7 +267,7 @@ export class PdfConverter {
             };
         }
 
-        console.log(`[converter-cli] Starting conversion of "${fileId}" (${noteData.byteLength} bytes) using ${cliPath}`);
+        console.debug(`[converter-cli] Starting conversion of "${fileId}" (${noteData.byteLength} bytes) using ${cliPath}`);
 
         // Create temp files for input and output
         const tempDir = os.tmpdir();
@@ -269,22 +277,22 @@ export class PdfConverter {
         try {
             // Write input file
             await fs.promises.writeFile(inputPath, Buffer.from(noteData));
-            console.log(`[converter-cli] Wrote temp input file: ${inputPath}`);
+            console.debug(`[converter-cli] Wrote temp input file: ${inputPath}`);
 
             // Run the CLI converter
             const cmd = `"${cliPath}" --input "${inputPath}" --output "${outputPath}"`;
-            console.log(`[converter-cli] Running: ${cmd}`);
-            
+            console.debug(`[converter-cli] Running: ${cmd}`);
+
             const { stdout, stderr } = await execAsync(cmd);
-            if (stdout) console.log(`[converter-cli] stdout: ${stdout}`);
-            if (stderr) console.log(`[converter-cli] stderr: ${stderr}`);
+            if (stdout) console.debug(`[converter-cli] stdout: ${stdout}`);
+            if (stderr) console.debug(`[converter-cli] stderr: ${stderr}`);
 
             // Read the output PDF
             const pdfBuffer = await fs.promises.readFile(outputPath);
             const pdfData = pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength);
 
             const conversionTimeMs = Date.now() - startTime;
-            console.log(`[converter-cli] Successfully converted "${fileId}" in ${conversionTimeMs}ms, PDF size: ${pdfData.byteLength} bytes`);
+            console.debug(`[converter-cli] Successfully converted "${fileId}" in ${conversionTimeMs}ms, PDF size: ${pdfData.byteLength} bytes`);
 
             return {
                 success: true,
@@ -295,7 +303,7 @@ export class PdfConverter {
         } catch (error) {
             const conversionTimeMs = Date.now() - startTime;
             const errorMsg = error instanceof Error ? error.message : String(error);
-            
+
             console.error(`[converter-cli] PDF conversion failed for "${fileId}":`, error);
 
             return {
@@ -307,8 +315,8 @@ export class PdfConverter {
         } finally {
             // Clean up temp files
             try {
-                await fs.promises.unlink(inputPath).catch(() => {});
-                await fs.promises.unlink(outputPath).catch(() => {});
+                await fs.promises.unlink(inputPath).catch(() => { /* ignore */ });
+                await fs.promises.unlink(outputPath).catch(() => { /* ignore */ });
             } catch {
                 // Ignore cleanup errors
             }
@@ -320,7 +328,7 @@ export class PdfConverter {
      */
     private async convertWithBuiltin(noteData: ArrayBuffer, noteId?: string): Promise<ConversionResult> {
         const startTime = Date.now();
-        const fileId = noteId || 'unknown';
+        const fileId = noteId ?? 'unknown';
 
         // Early validation with context
         if (!noteData || noteData.byteLength === 0) {
@@ -332,18 +340,18 @@ export class PdfConverter {
             };
         }
 
-        console.log(`[converter-builtin] Starting conversion of "${fileId}" (${noteData.byteLength} bytes)`);
+        console.debug(`[converter-builtin] Starting conversion of "${fileId}" (${noteData.byteLength} bytes)`);
 
         try {
             // Get note info first (this also validates the file)
             const info = getNoteInfo(noteData);
-            
+
             // Convert to PDF
             const pdfData = await convertNoteToPdf(noteData);
 
             const conversionTimeMs = Date.now() - startTime;
 
-            console.log(`[converter-builtin] Successfully converted "${fileId}" (${info.pageCount} pages) in ${conversionTimeMs}ms`);
+            console.debug(`[converter-builtin] Successfully converted "${fileId}" (${info.pageCount} pages) in ${conversionTimeMs}ms`);
 
             return {
                 success: true,
@@ -355,7 +363,7 @@ export class PdfConverter {
         } catch (error) {
             const conversionTimeMs = Date.now() - startTime;
             const errorMsg = error instanceof Error ? error.message : String(error);
-            
+
             console.error(`[converter-builtin] PDF conversion failed for "${fileId}":`, {
                 error: errorMsg,
                 fileSize: noteData.byteLength,
@@ -381,7 +389,7 @@ export class PdfConverter {
 
         for (let i = 0; i < notes.length; i++) {
             const { id, data } = notes[i];
-            
+
             if (onProgress) {
                 onProgress(i + 1, notes.length, id);
             }
@@ -403,7 +411,7 @@ export class PdfConverter {
     /**
      * Convert an entire directory of .note files to PDFs using CLI batch mode.
      * This is MUCH faster than converting files one by one.
-     * 
+     *
      * @param inputDir Directory containing .note files (can have subdirectories)
      * @param outputDir Directory where PDFs will be written (preserves folder structure)
      * @returns BatchConversionResult with success status and timing info
@@ -420,7 +428,7 @@ export class PdfConverter {
             };
         }
 
-        const cliPath = this.resolvedCliPath || findCliTool(this.cliPath);
+        const cliPath = this.resolvedCliPath ?? findCliTool(this.cliPath);
         if (!cliPath) {
             return {
                 success: false,
@@ -430,25 +438,25 @@ export class PdfConverter {
             };
         }
 
-        console.log(`[converter-cli] Starting batch conversion: ${inputDir} -> ${outputDir}`);
+        console.debug(`[converter-cli] Starting batch conversion: ${inputDir} -> ${outputDir}`);
 
         try {
             // Run the CLI converter in directory mode
             const cmd = `"${cliPath}" --input "${inputDir}" --output "${outputDir}"`;
-            console.log(`[converter-cli] Running: ${cmd}`);
-            
+            console.debug(`[converter-cli] Running: ${cmd}`);
+
             const { stdout, stderr } = await execAsync(cmd);
-            if (stdout) console.log(`[converter-cli] stdout: ${stdout}`);
-            if (stderr) console.log(`[converter-cli] stderr: ${stderr}`);
+            if (stdout) console.debug(`[converter-cli] stdout: ${stdout}`);
+            if (stderr) console.debug(`[converter-cli] stderr: ${stderr}`);
 
             const conversionTimeMs = Date.now() - startTime;
-            
+
             // Count output files
             let fileCount = 0;
             try {
                 const countPdfs = (dir: string): number => {
                     let count = 0;
-                    const entries = fs.readdirSync(dir, { withFileTypes: true });
+                    const entries = fs.readdirSync(dir, { withFileTypes: true }) as DirEntry[];
                     for (const entry of entries) {
                         const fullPath = path.join(dir, entry.name);
                         if (entry.isDirectory()) {
@@ -464,7 +472,7 @@ export class PdfConverter {
                 // Ignore count errors
             }
 
-            console.log(`[converter-cli] Batch conversion complete: ${fileCount} PDFs in ${conversionTimeMs}ms`);
+            console.debug(`[converter-cli] Batch conversion complete: ${fileCount} PDFs in ${conversionTimeMs}ms`);
 
             return {
                 success: true,
@@ -476,7 +484,7 @@ export class PdfConverter {
         } catch (error) {
             const conversionTimeMs = Date.now() - startTime;
             const errorMsg = error instanceof Error ? error.message : String(error);
-            
+
             console.error(`[converter-cli] Batch conversion failed:`, error);
 
             return {
@@ -490,6 +498,7 @@ export class PdfConverter {
 
     /**
      * Create a temporary directory for batch operations
+     * @param prefix - Prefix for the temp directory name
      * @param createDir - If true, creates the directory. If false, just returns the path (for CLI output dirs)
      */
     createTempDir(prefix: string, createDir: boolean = true): string {
@@ -507,8 +516,8 @@ export class PdfConverter {
      */
     async cleanupTempDir(tempDir: string): Promise<void> {
         try {
-            const removeRecursive = async (dir: string) => {
-                const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+            const removeRecursive = async (dir: string): Promise<void> => {
+                const entries = await fs.promises.readdir(dir, { withFileTypes: true }) as DirEntry[];
                 for (const entry of entries) {
                     const fullPath = path.join(dir, entry.name);
                     if (entry.isDirectory()) {
@@ -531,13 +540,13 @@ export class PdfConverter {
     async writeNoteToTempDir(tempDir: string, relativePath: string, data: ArrayBuffer): Promise<string> {
         const fullPath = path.join(tempDir, relativePath);
         const dir = path.dirname(fullPath);
-        
+
         // Ensure subdirectory exists
         await fs.promises.mkdir(dir, { recursive: true });
-        
+
         // Write the file
         await fs.promises.writeFile(fullPath, Buffer.from(data));
-        
+
         return fullPath;
     }
 }

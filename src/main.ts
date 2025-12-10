@@ -13,6 +13,10 @@ import { calculateSyncStatus, filterNewNotes, filterExistingNotes, splitByModifi
 import { filterNotes, sortNotes } from './utils/filters';
 import { NoteImporter } from './sync/importer';
 
+interface WindowWithDebug {
+    SUPERNOTE_DEBUG?: boolean;
+}
+
 export default class SupernoteCompanionPlugin extends Plugin {
     settings: SupernoteCompanionSettings;
     private apiClient: SupernoteAPIClient | null = null;
@@ -26,17 +30,18 @@ export default class SupernoteCompanionPlugin extends Plugin {
         // Register commands
         this.registerCommands();
 
-        console.log('Supernote Companion plugin loaded');
+        console.debug('Supernote Companion plugin loaded');
     }
 
     onunload(): void {
         // Clean up API client reference
         this.apiClient = null;
-        console.log('Supernote Companion plugin unloaded');
+        console.debug('Supernote Companion plugin unloaded');
     }
 
     async loadSettings(): Promise<void> {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const data = await this.loadData() as SupernoteCompanionSettings | null;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
     }
 
     async saveSettings(): Promise<void> {
@@ -50,7 +55,7 @@ export default class SupernoteCompanionPlugin extends Plugin {
         if (!this.apiClient) {
             // Use mock client for development if no device IP is configured
             if (!this.settings.deviceIp) {
-                const useMock = (window as any).SUPERNOTE_DEBUG || false;
+                const useMock = (window as WindowWithDebug).SUPERNOTE_DEBUG ?? false;
                 if (useMock) {
                     this.apiClient = new MockSupernoteAPIClient();
                 } else {
@@ -101,42 +106,42 @@ export default class SupernoteCompanionPlugin extends Plugin {
         this.addCommand({
             id: 'check-sync-status',
             name: 'Check sync status',
-            callback: async () => await this.checkSyncStatus()
+            callback: () => { void this.checkSyncStatus(); }
         });
 
         // Import New Notes
         this.addCommand({
             id: 'import-new-notes',
             name: 'Import new notes',
-            callback: async () => await this.importNewNotes()
+            callback: () => { void this.importNewNotes(); }
         });
 
         // Update Existing Notes
         this.addCommand({
             id: 'update-existing-notes',
             name: 'Update existing notes',
-            callback: async () => await this.updateExistingNotes()
+            callback: () => { void this.updateExistingNotes(); }
         });
 
         // Bulk Export All
         this.addCommand({
             id: 'bulk-export-all',
             name: 'Bulk export all notes',
-            callback: async () => await this.bulkExportAll()
+            callback: () => { void this.bulkExportAll(); }
         });
 
         // Manage Trashed Notes
         this.addCommand({
             id: 'manage-trashed-notes',
             name: 'Manage trashed notes',
-            callback: async () => await this.manageTrash()
+            callback: () => { void this.manageTrash(); }
         });
 
         // Test Connection
         this.addCommand({
             id: 'test-connection',
             name: 'Test Supernote connection',
-            callback: async () => await this.testConnection()
+            callback: () => { void this.testConnection(); }
         });
     }
 
@@ -145,11 +150,11 @@ export default class SupernoteCompanionPlugin extends Plugin {
      */
     private async testConnection(): Promise<void> {
         if (!this.settings.deviceIp) {
-            new Notice('Please configure your Supernote device IP in settings first.');
+            new Notice('Please configure your Supernote device IP in settings first');
             return;
         }
 
-        new Notice('Testing connection to Supernote device...');
+        new Notice('Testing connection to Supernote device');
 
         try {
             const client = this.getAPIClient();
@@ -170,14 +175,14 @@ export default class SupernoteCompanionPlugin extends Plugin {
      */
     private async checkSyncStatus(): Promise<void> {
         if (!this.settings.deviceIp) {
-            new Notice('Please configure your Supernote device IP in settings first.');
+            new Notice('Please configure your Supernote device IP in settings first');
             return;
         }
 
         const client = this.getAPIClient();
 
         try {
-            new Notice('Checking sync status...');
+            new Notice('Checking sync status');
 
             // Fetch remote notes
             const response = await client.fetchNoteFiles();
@@ -207,14 +212,14 @@ export default class SupernoteCompanionPlugin extends Plugin {
      */
     private async importNewNotes(): Promise<void> {
         if (!this.settings.deviceIp) {
-            new Notice('Please configure your Supernote device IP in settings first.');
+            new Notice('Please configure your Supernote device IP in settings first');
             return;
         }
 
         const client = this.getAPIClient();
 
         try {
-            new Notice('Fetching new notes...');
+            new Notice('Fetching new notes');
 
             // Fetch and filter remote notes
             const response = await client.fetchNoteFiles();
@@ -243,14 +248,14 @@ export default class SupernoteCompanionPlugin extends Plugin {
                 this.app,
                 sortedNotes,
                 'import',
-                async (selectedNotes) => {
-                    await this.executeImport(selectedNotes);
+                (selectedNotes) => {
+                    void this.executeImport(selectedNotes);
                 },
                 () => {
                     new Notice('Import cancelled');
                 },
-                async (noteId) => {
-                    await this.trashNote(noteId);
+                (noteId) => {
+                    void this.trashNote(noteId);
                 }
             ).open();
 
@@ -310,14 +315,14 @@ export default class SupernoteCompanionPlugin extends Plugin {
      */
     private async updateExistingNotes(): Promise<void> {
         if (!this.settings.deviceIp) {
-            new Notice('Please configure your Supernote device IP in settings first.');
+            new Notice('Please configure your Supernote device IP in settings first');
             return;
         }
 
         const client = this.getAPIClient();
 
         try {
-            new Notice('Fetching notes to update...');
+            new Notice('Fetching notes to update');
 
             // Fetch and filter remote notes
             const response = await client.fetchNoteFiles();
@@ -370,8 +375,8 @@ export default class SupernoteCompanionPlugin extends Plugin {
                 this.settings.tagsMergeStrategy,
                 this.settings.preserveCustomFields,
                 this.getExportOptions(),
-                async (updateOptions) => {
-                    await this.showUpdatePreview(notesToShow, localNotes, updateOptions);
+                (updateOptions) => {
+                    void this.showUpdatePreview(notesToShow, localNotes, updateOptions);
                 },
                 () => {
                     new Notice('Update cancelled');
@@ -441,14 +446,14 @@ export default class SupernoteCompanionPlugin extends Plugin {
                         this.app,
                         notesToUpdate,
                         'update',
-                        async (selectedNotes) => {
-                            await this.executeUpdate(selectedNotes, localNotes, updateOptions);
+                        (selectedNotes) => {
+                            void this.executeUpdate(selectedNotes, localNotes, updateOptions);
                         },
                         () => {
                             new Notice('Update cancelled');
                         },
-                        async (noteId) => {
-                            await this.trashNote(noteId);
+                        (noteId) => {
+                            void this.trashNote(noteId);
                         },
                         this.settings.updateModifiedFiles === 'ask' ? this.settings.lastSync : undefined,
                         this.settings.updateModifiedFiles === 'ask' ? localNotes : undefined
@@ -531,14 +536,14 @@ export default class SupernoteCompanionPlugin extends Plugin {
      */
     private async bulkExportAll(): Promise<void> {
         if (!this.settings.deviceIp) {
-            new Notice('Please configure your Supernote device IP in settings first.');
+            new Notice('Please configure your Supernote device IP in settings first');
             return;
         }
 
         const client = this.getAPIClient();
 
         try {
-            new Notice('Fetching all notes...');
+            new Notice('Fetching all notes');
 
             // Fetch ALL notes (no filtering except trash)
             const response = await client.fetchNoteFiles();
@@ -558,14 +563,14 @@ export default class SupernoteCompanionPlugin extends Plugin {
                 this.app,
                 sortedNotes,
                 'export',
-                async (selectedNotes) => {
-                    await this.executeImport(selectedNotes); // Same as import, but overwrites
+                (selectedNotes) => {
+                    void this.executeImport(selectedNotes); // Same as import, but overwrites
                 },
                 () => {
                     new Notice('Export cancelled');
                 },
-                async (noteId) => {
-                    await this.trashNote(noteId);
+                (noteId) => {
+                    void this.trashNote(noteId);
                 }
             ).open();
 
@@ -600,11 +605,11 @@ export default class SupernoteCompanionPlugin extends Plugin {
                 this.app,
                 this.settings.trashedNoteIds,
                 trashedNotes,
-                async (noteId) => {
-                    await this.restoreNote(noteId);
+                (noteId) => {
+                    void this.restoreNote(noteId);
                 },
-                async () => {
-                    await this.restoreAllNotes();
+                () => {
+                    void this.restoreAllNotes();
                 }
             ).open();
 

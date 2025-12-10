@@ -139,8 +139,7 @@ export function generatePdfFilename(note: SupernoteFile, template?: string): str
  */
 export function applyFilenameTemplate(note: SupernoteFile, template: string): string {
     const modifiedDate = new Date(note.modifiedAt);
-    const createdDate = new Date(note.createdAt);
-    
+
     // Clean the note name (remove .note extension if present)
     const cleanName = note.name.replace(/\.note$/i, '');
     

@@ -10,10 +10,10 @@ export class UpdateConfigModal extends Modal {
     private tagsMergeStrategy: MergeStrategy;
     private preserveCustomFields: boolean;
     private exportOptions: ExportOptions;
-    
+
     private onConfirm: (options: UpdateOptions) => void;
     private onCancel: () => void;
-    
+
     private fieldsContainer: HTMLElement | null = null;
 
     constructor(
@@ -41,17 +41,16 @@ export class UpdateConfigModal extends Modal {
         contentEl.empty();
 
         // Modal styling
-        this.modalEl.style.width = '550px';
-        this.modalEl.style.maxWidth = '90%';
-        this.titleEl.setText('Configure Update Options');
+        this.modalEl.addClass('supernote-modal-medium');
+        this.titleEl.setText('Configure update options');
 
         // Description
         contentEl.createEl('p', {
             text: 'Choose what to update in the selected notes. These settings override your defaults for this update only.',
-            cls: 'setting-item-description'
-        }).style.marginBottom = '20px';
+            cls: 'supernote-description-block-large'
+        });
 
-        // Update Mode
+        // Update mode
         new Setting(contentEl)
             .setName('Update mode')
             .setDesc('Choose what to update')
@@ -68,7 +67,7 @@ export class UpdateConfigModal extends Modal {
             );
 
         // Fields container (conditionally shown)
-        this.fieldsContainer = contentEl.createDiv('update-specific-fields');
+        this.fieldsContainer = contentEl.createDiv('supernote-fields-container');
         this.refreshFieldsSection();
 
         // Preserve custom fields toggle
@@ -83,7 +82,10 @@ export class UpdateConfigModal extends Modal {
             );
 
         // Array merge strategy section
-        contentEl.createEl('h4', { text: 'Array Merge Strategies' }).style.marginTop = '20px';
+        new Setting(contentEl)
+            .setHeading()
+            .setName('Array merge strategies')
+            .setClass('supernote-merge-header');
 
         new Setting(contentEl)
             .setName('Tags')
@@ -98,11 +100,7 @@ export class UpdateConfigModal extends Modal {
             );
 
         // Buttons
-        const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-        buttonContainer.style.marginTop = '25px';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.justifyContent = 'flex-end';
+        const buttonContainer = contentEl.createDiv('modal-button-container supernote-buttons-right');
 
         const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
         cancelButton.onclick = () => {
@@ -117,8 +115,8 @@ export class UpdateConfigModal extends Modal {
         continueButton.onclick = () => {
             const options: UpdateOptions = {
                 mode: this.updateMode,
-                specificFields: this.updateMode === 'specific-frontmatter' 
-                    ? Array.from(this.specificFields) 
+                specificFields: this.updateMode === 'specific-frontmatter'
+                    ? Array.from(this.specificFields)
                     : undefined,
                 preserveCustomFields: this.preserveCustomFields,
                 arrayMergeStrategy: {
@@ -137,23 +135,18 @@ export class UpdateConfigModal extends Modal {
         this.fieldsContainer.empty();
 
         if (this.updateMode === 'specific-frontmatter') {
-            this.fieldsContainer.style.display = 'block';
-            this.fieldsContainer.style.marginLeft = '20px';
-            this.fieldsContainer.style.padding = '15px';
-            this.fieldsContainer.style.backgroundColor = 'var(--background-secondary)';
-            this.fieldsContainer.style.borderRadius = '8px';
-            this.fieldsContainer.style.marginBottom = '15px';
+            this.fieldsContainer.removeClass('is-hidden');
 
-            this.fieldsContainer.createEl('div', {
+            this.fieldsContainer.createDiv({
                 text: 'Select which frontmatter fields to update:',
-                cls: 'setting-item-description'
-            }).style.marginBottom = '10px';
+                cls: 'supernote-fields-label setting-item-description'
+            });
 
             const fieldOptions: Array<{ key: FrontmatterField; label: string; desc: string }> = [
                 { key: 'name', label: 'Name', desc: 'Note title' },
                 { key: 'source', label: 'Source', desc: 'Original Supernote path' },
                 { key: 'date', label: 'Date', desc: 'Creation/modification dates' },
-                { key: 'pageCount', label: 'Page Count', desc: 'Number of pages' },
+                { key: 'pageCount', label: 'Page count', desc: 'Number of pages' },
                 { key: 'size', label: 'Size', desc: 'File size' },
                 { key: 'tags', label: 'Tags', desc: 'Note tags' },
             ];
@@ -174,7 +167,7 @@ export class UpdateConfigModal extends Modal {
                     );
             });
         } else {
-            this.fieldsContainer.style.display = 'none';
+            this.fieldsContainer.addClass('is-hidden');
         }
     }
 

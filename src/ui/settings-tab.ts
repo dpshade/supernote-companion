@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import type SupernoteCompanionPlugin from '../main';
-import { FrontmatterField } from '../api/types';
+import { FrontmatterField, UpdateMode } from '../api/types';
 import { PdfConverter } from '../api/converter';
 
 /**
@@ -17,30 +17,36 @@ export class SupernoteSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+        containerEl.addClass('supernote-settings');
 
-        containerEl.createEl('h1', { text: 'Supernote Companion Settings' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Supernote Companion');
 
-        // Connection Settings
+        // Connection settings
         this.createConnectionSettings(containerEl);
 
-        // Sync Settings
+        // Sync settings
         this.createSyncSettings(containerEl);
 
-        // Update Behavior Settings
+        // Update behavior settings
         this.createUpdateSettings(containerEl);
 
-        // Export Options
+        // Export options
         this.createExportSettings(containerEl);
 
-        // Advanced Settings (collapsible)
+        // Advanced settings (collapsible)
         this.createAdvancedSettings(containerEl);
     }
 
     private createConnectionSettings(containerEl: HTMLElement): void {
-        containerEl.createEl('h2', { text: 'Supernote Device Connection' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Supernote device connection');
+
         containerEl.createEl('p', {
             text: 'Connect to your Supernote device via WiFi. Enable "Browse & Access" on your Supernote to get the IP address.',
-            cls: 'setting-item-description'
+            cls: 'setting-item-description supernote-description-block'
         });
 
         // Device IP
@@ -59,14 +65,14 @@ export class SupernoteSettingTab extends PluginSettingTab {
                     ip = ip.replace(/:\d+\/?$/, '');
                     // Remove trailing slash
                     ip = ip.replace(/\/$/, '');
-                    
+
                     this.plugin.settings.deviceIp = ip;
                     this.plugin.resetAPIClient();
                     await this.plugin.saveSettings();
                 })
             );
 
-        // Device Port
+        // Device port
         new Setting(containerEl)
             .setName('Device port')
             .setDesc('The port for Browse & Access (default: 8089)')
@@ -83,12 +89,12 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Test Connection Button
+        // Test connection button
         new Setting(containerEl)
             .setName('Test connection')
             .setDesc('Verify that the plugin can connect to your Supernote device')
             .addButton(button => button
-                .setButtonText('Test Connection')
+                .setButtonText('Test connection')
                 .setCta()
                 .onClick(async () => {
                     if (!this.plugin.settings.deviceIp) {
@@ -98,30 +104,32 @@ export class SupernoteSettingTab extends PluginSettingTab {
 
                     button.setDisabled(true);
                     button.setButtonText('Testing...');
-                    
+
                     try {
                         const client = this.plugin.getAPIClient();
                         const status = await client.checkConnection();
-                        
+
                         if (status.connected) {
                             new Notice(`Connected to Supernote at ${this.plugin.settings.deviceIp}:${this.plugin.settings.devicePort}`);
                         } else {
-                            new Notice(`Connection failed: ${status.error || 'Unknown error'}\n\nMake sure Browse & Access is enabled on your Supernote.`);
+                            new Notice(`Connection failed: ${status.error ?? 'Unknown error'}\n\nMake sure Browse & Access is enabled on your Supernote.`);
                         }
                     } catch (error) {
                         new Notice(`Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     } finally {
                         button.setDisabled(false);
-                        button.setButtonText('Test Connection');
+                        button.setButtonText('Test connection');
                     }
                 })
             );
     }
 
     private createSyncSettings(containerEl: HTMLElement): void {
-        containerEl.createEl('h2', { text: 'Sync Configuration' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Sync configuration');
 
-        // Import Mode
+        // Import mode
         new Setting(containerEl)
             .setName('Import mode')
             .setDesc('How to import notes from your Supernote')
@@ -137,7 +145,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Notes Folder
+        // Notes folder
         new Setting(containerEl)
             .setName('Notes folder')
             .setDesc('Vault folder where imported files will be stored')
@@ -150,7 +158,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // PDF Folder (only shown for markdown-with-pdf mode)
+        // PDF folder (only shown for markdown-with-pdf mode)
         if (this.plugin.settings.importMode === 'markdown-with-pdf') {
             new Setting(containerEl)
                 .setName('PDF folder')
@@ -165,10 +173,10 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 );
         }
 
-        // Preserve Folder Structure
+        // Preserve folder structure
         new Setting(containerEl)
             .setName('Preserve folder structure')
-            .setDesc('Mirror the folder structure from your Supernote (e.g., /Note/Work/Projects → Supernote/Work/Projects)')
+            .setDesc('Mirror the folder structure from your Supernote (e.g., /Note/Work/Projects becomes Supernote/Work/Projects)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.preserveFolderStructure)
                 .onChange(async (value) => {
@@ -177,7 +185,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Filename Template
+        // Filename template
         new Setting(containerEl)
             .setName('Filename template')
             .setDesc('Template for imported filenames. Variables: {name}, {date}, {created}, {modified}, {datetime}, {year}, {month}, {day}, {pages}, {id}')
@@ -191,21 +199,19 @@ export class SupernoteSettingTab extends PluginSettingTab {
             );
 
         // Template examples hint
-        const templateHint = containerEl.createDiv('setting-item-description');
-        templateHint.style.marginLeft = '20px';
-        templateHint.style.marginBottom = '15px';
+        const templateHint = containerEl.createDiv('setting-item-description supernote-template-hint');
         templateHint.createEl('strong', { text: 'Examples:' });
         templateHint.createEl('br');
         templateHint.createEl('code', { text: '{name}' });
-        templateHint.appendText(' → "Meeting Notes"');
+        templateHint.appendText(' produces "Meeting Notes"');
         templateHint.createEl('br');
         templateHint.createEl('code', { text: '{date} {name}' });
-        templateHint.appendText(' → "2024-01-15 Meeting Notes"');
+        templateHint.appendText(' produces "2024-01-15 Meeting Notes"');
         templateHint.createEl('br');
         templateHint.createEl('code', { text: '{year}/{month}/{name}' });
-        templateHint.appendText(' → "2024/01/Meeting Notes"');
+        templateHint.appendText(' produces "2024/01/Meeting Notes"');
 
-        // Last Sync Info
+        // Last sync info
         if (this.plugin.settings.lastSync > 0) {
             const lastSyncDate = new Date(this.plugin.settings.lastSync);
             new Setting(containerEl)
@@ -215,9 +221,11 @@ export class SupernoteSettingTab extends PluginSettingTab {
     }
 
     private createUpdateSettings(containerEl: HTMLElement): void {
-        containerEl.createEl('h2', { text: 'Update Behavior' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Update behavior');
 
-        // Update Modified Files
+        // Update modified files
         new Setting(containerEl)
             .setName('Update modified files')
             .setDesc('How to handle files that have been modified locally since last sync')
@@ -232,7 +240,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Default Update Mode
+        // Default update mode
         new Setting(containerEl)
             .setName('Default update mode')
             .setDesc('Choose what to update when syncing existing notes')
@@ -242,7 +250,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 .addOption('content-only', 'Update content only')
                 .addOption('specific-frontmatter', 'Update specific frontmatter fields')
                 .setValue(this.plugin.settings.updateMode)
-                .onChange(async (value: any) => {
+                .onChange(async (value: UpdateMode) => {
                     this.plugin.settings.updateMode = value;
                     await this.plugin.saveSettings();
                     // Refresh display to show/hide field selector
@@ -250,12 +258,12 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Specific Fields Selector (conditional)
+        // Specific fields selector (conditional)
         if (this.plugin.settings.updateMode === 'specific-frontmatter') {
             this.createFieldSelector(containerEl);
         }
 
-        // Preserve Custom Fields
+        // Preserve custom fields
         new Setting(containerEl)
             .setName('Preserve custom fields')
             .setDesc('Keep user-added frontmatter fields during updates')
@@ -267,7 +275,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Tags Merge Strategy
+        // Tags merge strategy
         new Setting(containerEl)
             .setName('Tags merge strategy')
             .setDesc('How to handle tags when updating')
@@ -283,23 +291,18 @@ export class SupernoteSettingTab extends PluginSettingTab {
     }
 
     private createFieldSelector(containerEl: HTMLElement): void {
-        const fieldsContainer = containerEl.createDiv('specific-fields-container');
-        fieldsContainer.style.marginLeft = '20px';
-        fieldsContainer.style.padding = '15px';
-        fieldsContainer.style.backgroundColor = 'var(--background-secondary)';
-        fieldsContainer.style.borderRadius = '8px';
-        fieldsContainer.style.marginBottom = '15px';
+        const fieldsContainer = containerEl.createDiv('supernote-fields-container');
 
-        fieldsContainer.createEl('div', {
+        fieldsContainer.createDiv({
             text: 'Select which frontmatter fields to update:',
-            cls: 'setting-item-description'
-        }).style.marginBottom = '10px';
+            cls: 'setting-item-description supernote-fields-label'
+        });
 
         const fieldOptions: Array<{ key: FrontmatterField; label: string; desc: string }> = [
             { key: 'name', label: 'Name', desc: 'Note title' },
             { key: 'source', label: 'Source', desc: 'Original path on Supernote' },
             { key: 'date', label: 'Date', desc: 'Creation and modification dates' },
-            { key: 'pageCount', label: 'Page Count', desc: 'Number of pages' },
+            { key: 'pageCount', label: 'Page count', desc: 'Number of pages' },
             { key: 'size', label: 'Size', desc: 'File size' },
             { key: 'tags', label: 'Tags', desc: 'Note tags' },
         ];
@@ -316,7 +319,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                                 this.plugin.settings.specificFrontmatterFields.push(field.key);
                             }
                         } else {
-                            this.plugin.settings.specificFrontmatterFields = 
+                            this.plugin.settings.specificFrontmatterFields =
                                 this.plugin.settings.specificFrontmatterFields.filter(f => f !== field.key);
                         }
                         await this.plugin.saveSettings();
@@ -331,7 +334,9 @@ export class SupernoteSettingTab extends PluginSettingTab {
             return;
         }
 
-        containerEl.createEl('h2', { text: 'Markdown Options' });
+        new Setting(containerEl)
+            .setHeading()
+            .setName('Markdown options');
 
         // Attach PDF (only for markdown-with-pdf mode)
         if (this.plugin.settings.importMode === 'markdown-with-pdf') {
@@ -347,10 +352,10 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 );
         }
 
-        // Include Thumbnail
+        // Include thumbnail
         new Setting(containerEl)
             .setName('Include thumbnail')
-            .setDesc('Embed a thumbnail preview image in the note (not available from device API)')
+            .setDesc('Embed a thumbnail preview image in the note (not available from device API yet)')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.includeThumbnail)
                 .onChange(async (value) => {
@@ -361,42 +366,34 @@ export class SupernoteSettingTab extends PluginSettingTab {
     }
 
     private createAdvancedSettings(containerEl: HTMLElement): void {
-        const advancedContainer = containerEl.createDiv('advanced-settings-container');
-        advancedContainer.style.marginTop = '30px';
-        advancedContainer.style.borderTop = '1px solid var(--background-modifier-border)';
-        advancedContainer.style.paddingTop = '20px';
+        const advancedContainer = containerEl.createDiv('supernote-advanced-container');
 
         // Collapsible header
-        const advancedHeader = advancedContainer.createEl('h2', {
-            text: '▶ Advanced Settings',
-            cls: 'advanced-header'
-        });
-        advancedHeader.style.cursor = 'pointer';
-        advancedHeader.style.userSelect = 'none';
+        const headerSetting = new Setting(advancedContainer)
+            .setHeading()
+            .setName('Advanced settings')
+            .setClass('supernote-advanced-header');
 
-        const advancedContent = advancedContainer.createDiv('advanced-content');
-        advancedContent.style.display = 'none';
-        advancedContent.style.marginTop = '15px';
+        const advancedContent = advancedContainer.createDiv('supernote-advanced-content');
 
         // Toggle collapse
-        advancedHeader.addEventListener('click', () => {
-            const isHidden = advancedContent.style.display === 'none';
-            advancedContent.style.display = isHidden ? 'block' : 'none';
-            advancedHeader.setText(isHidden ? '▼ Advanced Settings' : '▶ Advanced Settings');
-        });
+        headerSetting.settingEl.onclick = () => {
+            advancedContent.toggleClass('is-open', !advancedContent.hasClass('is-open'));
+        };
 
-        // PDF Converter Section
-        advancedContent.createEl('h3', { text: 'PDF Converter' });
-        
-        const converterDesc = advancedContent.createDiv('setting-item-description');
-        converterDesc.style.marginBottom = '15px';
-        converterDesc.createEl('strong', { text: 'CLI (Recommended):' });
+        // PDF converter section
+        new Setting(advancedContent)
+            .setHeading()
+            .setName('PDF converter');
+
+        const converterDesc = advancedContent.createDiv('setting-item-description supernote-converter-desc');
+        converterDesc.createEl('strong', { text: 'CLI (recommended):' });
         converterDesc.appendText(' Uses the supernote_pdf Rust binary for reliable conversion.');
         converterDesc.createEl('br');
         converterDesc.createEl('strong', { text: 'Built-in:' });
         converterDesc.appendText(' Uses TypeScript implementation (experimental, may have rendering issues).');
 
-        // Converter Mode
+        // Converter mode
         new Setting(advancedContent)
             .setName('Converter mode')
             .setDesc('Choose how to convert .note files to PDF')
@@ -411,13 +408,14 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // CLI Path (only shown for CLI mode)
+        // CLI path (only shown for CLI mode)
         if (this.plugin.settings.converterMode === 'cli') {
             new Setting(advancedContent)
                 .setName('CLI binary path')
                 .setDesc('Path to the supernote_pdf binary (e.g., /usr/local/bin/supernote_pdf)')
                 .addText(text => text
-                    .setPlaceholder('/path/to/supernote_pdf')
+                    // eslint-disable-next-line obsidianmd/ui/sentence-case
+                    .setPlaceholder('/usr/local/bin/supernote_pdf')
                     .setValue(this.plugin.settings.converterPath)
                     .onChange(async (value) => {
                         this.plugin.settings.converterPath = value.trim();
@@ -425,7 +423,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                     })
                 );
 
-            // Test CLI Button
+            // Test CLI button
             new Setting(advancedContent)
                 .setName('Test converter')
                 .setDesc('Verify that the CLI binary is accessible')
@@ -436,10 +434,10 @@ export class SupernoteSettingTab extends PluginSettingTab {
                             new Notice('Please set the CLI binary path first.');
                             return;
                         }
-                        
+
                         button.setDisabled(true);
                         button.setButtonText('Testing...');
-                        
+
                         try {
                             const converter = new PdfConverter(
                                 this.plugin.settings.converterMode,
@@ -447,7 +445,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                             );
                             const available = await converter.isToolAvailable();
                             const version = await converter.getToolVersion();
-                            
+
                             if (available) {
                                 new Notice(`CLI converter working! ${version}`);
                             } else {
@@ -467,16 +465,16 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 .setName('Converter status')
                 .setDesc('Built-in TypeScript converter (experimental)')
                 .addButton(button => button
-                    .setButtonText('Check Version')
+                    .setButtonText('Check version')
                     .onClick(async () => {
                         const converter = new PdfConverter('builtin', '');
                         const version = await converter.getToolVersion();
-                        new Notice(`PDF Converter: ${version}`);
+                        new Notice(`PDF converter: ${version}`);
                     })
                 );
         }
 
-        // Connection Timeout
+        // Connection timeout
         new Setting(advancedContent)
             .setName('Connection timeout')
             .setDesc('Timeout for device connections in milliseconds')
@@ -492,12 +490,12 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Clear Trash
+        // Clear trash
         new Setting(advancedContent)
             .setName('Clear trashed notes')
             .setDesc(`${this.plugin.settings.trashedNoteIds.length} note(s) currently in trash`)
             .addButton(button => button
-                .setButtonText('Clear Trash')
+                .setButtonText('Clear trash')
                 .setWarning()
                 .onClick(async () => {
                     this.plugin.settings.trashedNoteIds = [];
@@ -507,7 +505,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Reset Last Sync
+        // Reset last sync
         new Setting(advancedContent)
             .setName('Reset sync timestamp')
             .setDesc('Reset the last sync time (useful for forcing a full resync)')
@@ -522,14 +520,14 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 })
             );
 
-        // Debug Mode Toggle (for development)
+        // Debug mode toggle (for development)
         new Setting(advancedContent)
             .setName('Debug mode')
             .setDesc('Enable verbose logging and mock client for testing without a real device')
             .addToggle(toggle => toggle
-                .setValue((window as any).SUPERNOTE_DEBUG || false)
+                .setValue((window as unknown as { SUPERNOTE_DEBUG?: boolean }).SUPERNOTE_DEBUG ?? false)
                 .onChange((value) => {
-                    (window as any).SUPERNOTE_DEBUG = value;
+                    (window as unknown as { SUPERNOTE_DEBUG?: boolean }).SUPERNOTE_DEBUG = value;
                     this.plugin.resetAPIClient();
                     new Notice(`Debug mode ${value ? 'enabled' : 'disabled'}`);
                 })

@@ -1,4 +1,4 @@
-import { App, Modal, Notice, setIcon } from 'obsidian';
+import { App, Modal, Notice } from 'obsidian';
 import { SupernoteFile } from '../api/types';
 
 /**
@@ -29,49 +29,35 @@ export class TrashManagementModal extends Modal {
         contentEl.empty();
 
         // Modal styling
-        this.modalEl.style.width = '700px';
-        this.modalEl.style.maxWidth = '90%';
-        this.titleEl.setText('Manage Trashed Notes');
+        this.modalEl.addClass('supernote-modal-large');
+        this.titleEl.setText('Manage trashed notes');
 
         // Description
         contentEl.createEl('p', {
             text: 'These notes have been excluded from sync. Restore them to include them in future syncs.',
-            cls: 'setting-item-description'
-        }).style.marginBottom = '15px';
+            cls: 'supernote-description-block'
+        });
 
         // Count
-        const countEl = contentEl.createEl('p');
+        const countEl = contentEl.createEl('p', { cls: 'supernote-trash-count' });
         countEl.createEl('strong', { text: String(this.trashedIds.length) });
         countEl.appendText(' note(s) currently trashed');
-        countEl.style.marginBottom = '20px';
 
         if (this.trashedIds.length === 0) {
-            const emptyEl = contentEl.createDiv('trash-empty');
-            emptyEl.style.textAlign = 'center';
-            emptyEl.style.padding = '40px';
-            emptyEl.style.color = 'var(--text-muted)';
-            const iconEl = emptyEl.createDiv();
-            iconEl.style.fontSize = '3em';
-            iconEl.style.marginBottom = '10px';
-            iconEl.setText('🗑️');
+            const emptyEl = contentEl.createDiv('supernote-empty-state');
+            const iconEl = emptyEl.createDiv('supernote-empty-state-icon');
+            iconEl.setText('Bin is empty');
             emptyEl.createDiv({ text: 'No notes in trash' });
         } else {
             // Scrollable list container
-            const listContainer = contentEl.createDiv('trash-list-container');
-            listContainer.style.maxHeight = '400px';
-            listContainer.style.overflowY = 'auto';
-            listContainer.style.border = '1px solid var(--background-modifier-border)';
-            listContainer.style.borderRadius = '6px';
-
+            const listContainer = contentEl.createDiv('supernote-scroll-container supernote-scroll-short');
             this.createTrashList(listContainer);
 
-            // Restore All button
-            const restoreAllContainer = contentEl.createDiv();
-            restoreAllContainer.style.marginTop = '15px';
-            restoreAllContainer.style.textAlign = 'right';
+            // Restore all button
+            const restoreAllContainer = contentEl.createDiv('supernote-restore-all-container');
 
             const restoreAllBtn = restoreAllContainer.createEl('button', {
-                text: 'Restore All',
+                text: 'Restore all',
                 cls: 'mod-cta'
             });
             restoreAllBtn.onclick = () => {
@@ -82,17 +68,14 @@ export class TrashManagementModal extends Modal {
         }
 
         // Close button
-        const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-        buttonContainer.style.marginTop = '20px';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.justifyContent = 'flex-end';
+        const buttonContainer = contentEl.createDiv('modal-button-container supernote-buttons-right');
 
         const closeButton = buttonContainer.createEl('button', { text: 'Close' });
         closeButton.onclick = () => this.close();
     }
 
     private createTrashList(container: HTMLElement): void {
-        const list = container.createDiv('trash-list');
+        const list = container.createDiv('supernote-trash-list');
 
         // If we have note details, show them; otherwise show IDs
         if (this.trashedNotes.length > 0) {
@@ -108,40 +91,21 @@ export class TrashManagementModal extends Modal {
     }
 
     private createNoteItem(container: HTMLElement, note: SupernoteFile): void {
-        const item = container.createDiv('trash-item');
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
-        item.style.justifyContent = 'space-between';
-        item.style.padding = '12px 15px';
-        item.style.borderBottom = '1px solid var(--background-modifier-border)';
+        const item = container.createDiv('supernote-trash-item');
 
         // Note info
-        const infoDiv = item.createDiv('trash-item-info');
-        infoDiv.style.flex = '1';
-        infoDiv.style.minWidth = '0';
+        const infoDiv = item.createDiv('supernote-trash-item-info');
 
-        const nameEl = infoDiv.createEl('div', { text: note.name });
-        nameEl.style.fontWeight = '500';
-        nameEl.style.marginBottom = '4px';
-        nameEl.style.overflow = 'hidden';
-        nameEl.style.textOverflow = 'ellipsis';
-        nameEl.style.whiteSpace = 'nowrap';
-
-        const pathEl = infoDiv.createEl('div', { text: note.path });
-        pathEl.style.fontSize = '0.85em';
-        pathEl.style.color = 'var(--text-muted)';
-        pathEl.style.overflow = 'hidden';
-        pathEl.style.textOverflow = 'ellipsis';
-        pathEl.style.whiteSpace = 'nowrap';
+        infoDiv.createEl('div', { text: note.name, cls: 'supernote-trash-item-name' });
+        infoDiv.createEl('div', { text: note.path, cls: 'supernote-trash-item-path' });
 
         // Restore button
-        const restoreBtn = item.createEl('button', { text: 'Restore' });
-        restoreBtn.style.marginLeft = '15px';
+        const restoreBtn = item.createEl('button', { text: 'Restore', cls: 'supernote-restore-btn' });
         restoreBtn.onclick = () => {
             this.onRestore(note.id);
             item.remove();
             new Notice(`Restored: ${note.name}`);
-            
+
             // Update count and check if empty
             this.trashedIds = this.trashedIds.filter(id => id !== note.id);
             if (this.trashedIds.length === 0) {
@@ -152,31 +116,21 @@ export class TrashManagementModal extends Modal {
     }
 
     private createIdItem(container: HTMLElement, id: string): void {
-        const item = container.createDiv('trash-item');
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
-        item.style.justifyContent = 'space-between';
-        item.style.padding = '12px 15px';
-        item.style.borderBottom = '1px solid var(--background-modifier-border)';
+        const item = container.createDiv('supernote-trash-item');
 
         // ID info
-        const infoDiv = item.createDiv('trash-item-info');
-        infoDiv.style.flex = '1';
-        infoDiv.style.minWidth = '0';
+        const infoDiv = item.createDiv('supernote-trash-item-info');
 
-        const idEl = infoDiv.createEl('div', { text: `ID: ${this.truncateId(id)}` });
-        idEl.style.fontFamily = 'var(--font-monospace)';
-        idEl.style.fontSize = '0.9em';
-        idEl.title = id;
+        infoDiv.createEl('div', { text: `ID: ${this.truncateId(id)}`, cls: 'supernote-trash-item-id' });
+        infoDiv.title = id;
 
         // Restore button
-        const restoreBtn = item.createEl('button', { text: 'Restore' });
-        restoreBtn.style.marginLeft = '15px';
+        const restoreBtn = item.createEl('button', { text: 'Restore', cls: 'supernote-restore-btn' });
         restoreBtn.onclick = () => {
             this.onRestore(id);
             item.remove();
             new Notice(`Restored note ID: ${this.truncateId(id)}`);
-            
+
             // Update count and check if empty
             this.trashedIds = this.trashedIds.filter(i => i !== id);
             if (this.trashedIds.length === 0) {
