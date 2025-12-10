@@ -5465,12 +5465,16 @@ Make sure Browse & Access is enabled on your Supernote.`);
     const templateHint = containerEl.createDiv("setting-item-description");
     templateHint.style.marginLeft = "20px";
     templateHint.style.marginBottom = "15px";
-    templateHint.innerHTML = `
-            <strong>Examples:</strong><br>
-            <code>{name}</code> \u2192 "Meeting Notes"<br>
-            <code>{date} {name}</code> \u2192 "2024-01-15 Meeting Notes"<br>
-            <code>{year}/{month}/{name}</code> \u2192 "2024/01/Meeting Notes"
-        `;
+    templateHint.createEl("strong", { text: "Examples:" });
+    templateHint.createEl("br");
+    templateHint.createEl("code", { text: "{name}" });
+    templateHint.appendText(' \u2192 "Meeting Notes"');
+    templateHint.createEl("br");
+    templateHint.createEl("code", { text: "{date} {name}" });
+    templateHint.appendText(' \u2192 "2024-01-15 Meeting Notes"');
+    templateHint.createEl("br");
+    templateHint.createEl("code", { text: "{year}/{month}/{name}" });
+    templateHint.appendText(' \u2192 "2024/01/Meeting Notes"');
     if (this.plugin.settings.lastSync > 0) {
       const lastSyncDate = new Date(this.plugin.settings.lastSync);
       new import_obsidian2.Setting(containerEl).setName("Last sync").setDesc(`Last synced: ${lastSyncDate.toLocaleString()}`);
@@ -5583,10 +5587,11 @@ Make sure Browse & Access is enabled on your Supernote.`);
     advancedContent.createEl("h3", { text: "PDF Converter" });
     const converterDesc = advancedContent.createDiv("setting-item-description");
     converterDesc.style.marginBottom = "15px";
-    converterDesc.innerHTML = `
-            <strong>CLI (Recommended):</strong> Uses the supernote_pdf Rust binary for reliable conversion.<br>
-            <strong>Built-in:</strong> Uses TypeScript implementation (experimental, may have rendering issues).
-        `;
+    converterDesc.createEl("strong", { text: "CLI (Recommended):" });
+    converterDesc.appendText(" Uses the supernote_pdf Rust binary for reliable conversion.");
+    converterDesc.createEl("br");
+    converterDesc.createEl("strong", { text: "Built-in:" });
+    converterDesc.appendText(" Uses TypeScript implementation (experimental, may have rendering issues).");
     new import_obsidian2.Setting(advancedContent).setName("Converter mode").setDesc("Choose how to convert .note files to PDF").addDropdown(
       (dropdown) => dropdown.addOption("cli", "CLI binary (recommended)").addOption("builtin", "Built-in TypeScript (experimental)").setValue(this.plugin.settings.converterMode).onChange(async (value) => {
         this.plugin.settings.converterMode = value;
@@ -5922,26 +5927,14 @@ var SyncStatusModal = class extends import_obsidian3.Modal {
     summaryEl.style.padding = "15px";
     summaryEl.style.backgroundColor = "var(--background-secondary)";
     summaryEl.style.borderRadius = "8px";
-    summaryEl.innerHTML = `
-            <div style="display: flex; justify-content: space-around; text-align: center;">
-                <div>
-                    <div style="font-size: 2em; font-weight: bold;">${total}</div>
-                    <div style="color: var(--text-muted);">Total Notes</div>
-                </div>
-                <div>
-                    <div style="font-size: 2em; font-weight: bold; color: var(--text-accent);">${this.status.new.length}</div>
-                    <div style="color: var(--text-muted);">New</div>
-                </div>
-                <div>
-                    <div style="font-size: 2em; font-weight: bold; color: var(--color-orange);">${this.status.updated.length}</div>
-                    <div style="color: var(--text-muted);">Updated</div>
-                </div>
-                <div>
-                    <div style="font-size: 2em; font-weight: bold; color: var(--color-green);">${this.status.synced.length}</div>
-                    <div style="color: var(--text-muted);">Synced</div>
-                </div>
-            </div>
-        `;
+    const flexContainer = summaryEl.createDiv();
+    flexContainer.style.display = "flex";
+    flexContainer.style.justifyContent = "space-around";
+    flexContainer.style.textAlign = "center";
+    this.createStatBox(flexContainer, String(total), "Total Notes");
+    this.createStatBox(flexContainer, String(this.status.new.length), "New", "var(--text-accent)");
+    this.createStatBox(flexContainer, String(this.status.updated.length), "Updated", "var(--color-orange)");
+    this.createStatBox(flexContainer, String(this.status.synced.length), "Synced", "var(--color-green)");
     const scrollContainer = contentEl.createDiv("sync-status-scroll");
     scrollContainer.style.maxHeight = "500px";
     scrollContainer.style.overflowY = "auto";
@@ -6056,6 +6049,16 @@ var SyncStatusModal = class extends import_obsidian3.Modal {
     const start = path3.slice(0, 15);
     const end = path3.slice(-20);
     return `${start}...${end}`;
+  }
+  createStatBox(container, value, label, color) {
+    const box = container.createDiv();
+    const valueEl = box.createDiv({ text: value });
+    valueEl.style.fontSize = "2em";
+    valueEl.style.fontWeight = "bold";
+    if (color)
+      valueEl.style.color = color;
+    const labelEl = box.createDiv({ text: label });
+    labelEl.style.color = "var(--text-muted)";
   }
   onClose() {
     this.contentEl.empty();
@@ -6670,11 +6673,10 @@ var UpdatePreviewModal = class extends import_obsidian6.Modal {
     const totalFiles = this.notePreviews.length;
     const statsEl = contentEl.createDiv("update-preview-stats");
     statsEl.style.marginBottom = "15px";
-    statsEl.innerHTML = `
-            <strong style="color: var(--text-accent);">
-                ${filesWithChanges} of ${totalFiles} file(s) will be updated
-            </strong>
-        `;
+    const statsText = statsEl.createEl("strong", {
+      text: `${filesWithChanges} of ${totalFiles} file(s) will be updated`
+    });
+    statsText.style.color = "var(--text-accent)";
     const tableContainer = contentEl.createDiv("update-preview-table-container");
     tableContainer.style.maxHeight = "450px";
     tableContainer.style.overflowY = "auto";
@@ -6745,7 +6747,8 @@ var UpdatePreviewModal = class extends import_obsidian6.Modal {
         changesList.style.fontSize = "0.9em";
         const fields = preview.preview.frontmatterChanges.map((c) => c.field);
         const fieldsText = fields.length <= 3 ? fields.join(", ") : `${fields.slice(0, 3).join(", ")} +${fields.length - 3} more`;
-        changesList.innerHTML = `<span style="color: var(--text-accent);">${fieldsText}</span>`;
+        const span = changesList.createSpan({ text: fieldsText });
+        span.style.color = "var(--text-accent)";
         changesList.title = fields.join(", ");
         fmCell.appendChild(changesList);
       } else {
@@ -6756,7 +6759,8 @@ var UpdatePreviewModal = class extends import_obsidian6.Modal {
       contentCell.style.padding = "12px";
       contentCell.style.borderBottom = "1px solid var(--background-modifier-border)";
       if (preview.preview.contentChanged) {
-        contentCell.innerHTML = '<span style="color: var(--color-orange);">Will update</span>';
+        const span = contentCell.createSpan({ text: "Will update" });
+        span.style.color = "var(--color-orange)";
       } else {
         contentCell.textContent = "No change";
         contentCell.style.color = "var(--text-muted)";
@@ -6767,7 +6771,8 @@ var UpdatePreviewModal = class extends import_obsidian6.Modal {
       if (preview.preview.customFieldsPreserved.length > 0) {
         const preserved = preview.preview.customFieldsPreserved;
         const text = preserved.length <= 2 ? preserved.join(", ") : `${preserved.slice(0, 2).join(", ")} +${preserved.length - 2}`;
-        customCell.innerHTML = `<span style="color: var(--color-green);">${text}</span>`;
+        const span = customCell.createSpan({ text });
+        span.style.color = "var(--color-green)";
         customCell.title = preserved.join(", ");
       } else {
         customCell.textContent = "-";
@@ -6816,17 +6821,19 @@ var TrashManagementModal = class extends import_obsidian7.Modal {
       cls: "setting-item-description"
     }).style.marginBottom = "15px";
     const countEl = contentEl.createEl("p");
-    countEl.innerHTML = `<strong>${this.trashedIds.length}</strong> note(s) currently trashed`;
+    countEl.createEl("strong", { text: String(this.trashedIds.length) });
+    countEl.appendText(" note(s) currently trashed");
     countEl.style.marginBottom = "20px";
     if (this.trashedIds.length === 0) {
       const emptyEl = contentEl.createDiv("trash-empty");
       emptyEl.style.textAlign = "center";
       emptyEl.style.padding = "40px";
       emptyEl.style.color = "var(--text-muted)";
-      emptyEl.innerHTML = `
-                <div style="font-size: 3em; margin-bottom: 10px;">\u{1F5D1}\uFE0F</div>
-                <div>No notes in trash</div>
-            `;
+      const iconEl = emptyEl.createDiv();
+      iconEl.style.fontSize = "3em";
+      iconEl.style.marginBottom = "10px";
+      iconEl.setText("\u{1F5D1}\uFE0F");
+      emptyEl.createDiv({ text: "No notes in trash" });
     } else {
       const listContainer = contentEl.createDiv("trash-list-container");
       listContainer.style.maxHeight = "400px";
@@ -7704,6 +7711,7 @@ var SupernoteCompanionPlugin = class extends import_obsidian10.Plugin {
     console.log("Supernote Companion plugin loaded");
   }
   onunload() {
+    this.apiClient = null;
     console.log("Supernote Companion plugin unloaded");
   }
   async loadSettings() {

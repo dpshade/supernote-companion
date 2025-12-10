@@ -194,12 +194,16 @@ export class SupernoteSettingTab extends PluginSettingTab {
         const templateHint = containerEl.createDiv('setting-item-description');
         templateHint.style.marginLeft = '20px';
         templateHint.style.marginBottom = '15px';
-        templateHint.innerHTML = `
-            <strong>Examples:</strong><br>
-            <code>{name}</code> → "Meeting Notes"<br>
-            <code>{date} {name}</code> → "2024-01-15 Meeting Notes"<br>
-            <code>{year}/{month}/{name}</code> → "2024/01/Meeting Notes"
-        `;
+        templateHint.createEl('strong', { text: 'Examples:' });
+        templateHint.createEl('br');
+        templateHint.createEl('code', { text: '{name}' });
+        templateHint.appendText(' → "Meeting Notes"');
+        templateHint.createEl('br');
+        templateHint.createEl('code', { text: '{date} {name}' });
+        templateHint.appendText(' → "2024-01-15 Meeting Notes"');
+        templateHint.createEl('br');
+        templateHint.createEl('code', { text: '{year}/{month}/{name}' });
+        templateHint.appendText(' → "2024/01/Meeting Notes"');
 
         // Last Sync Info
         if (this.plugin.settings.lastSync > 0) {
@@ -386,10 +390,11 @@ export class SupernoteSettingTab extends PluginSettingTab {
         
         const converterDesc = advancedContent.createDiv('setting-item-description');
         converterDesc.style.marginBottom = '15px';
-        converterDesc.innerHTML = `
-            <strong>CLI (Recommended):</strong> Uses the supernote_pdf Rust binary for reliable conversion.<br>
-            <strong>Built-in:</strong> Uses TypeScript implementation (experimental, may have rendering issues).
-        `;
+        converterDesc.createEl('strong', { text: 'CLI (Recommended):' });
+        converterDesc.appendText(' Uses the supernote_pdf Rust binary for reliable conversion.');
+        converterDesc.createEl('br');
+        converterDesc.createEl('strong', { text: 'Built-in:' });
+        converterDesc.appendText(' Uses TypeScript implementation (experimental, may have rendering issues).');
 
         // Converter Mode
         new Setting(advancedContent)

@@ -70,11 +70,10 @@ export class UpdatePreviewModal extends Modal {
 
         const statsEl = contentEl.createDiv('update-preview-stats');
         statsEl.style.marginBottom = '15px';
-        statsEl.innerHTML = `
-            <strong style="color: var(--text-accent);">
-                ${filesWithChanges} of ${totalFiles} file(s) will be updated
-            </strong>
-        `;
+        const statsText = statsEl.createEl('strong', { 
+            text: `${filesWithChanges} of ${totalFiles} file(s) will be updated` 
+        });
+        statsText.style.color = 'var(--text-accent)';
 
         // Scrollable table container
         const tableContainer = contentEl.createDiv('update-preview-table-container');
@@ -170,7 +169,8 @@ export class UpdatePreviewModal extends Modal {
                     ? fields.join(', ')
                     : `${fields.slice(0, 3).join(', ')} +${fields.length - 3} more`;
 
-                changesList.innerHTML = `<span style="color: var(--text-accent);">${fieldsText}</span>`;
+                const span = changesList.createSpan({ text: fieldsText });
+                span.style.color = 'var(--text-accent)';
                 changesList.title = fields.join(', ');
                 fmCell.appendChild(changesList);
             } else {
@@ -184,7 +184,8 @@ export class UpdatePreviewModal extends Modal {
             contentCell.style.borderBottom = '1px solid var(--background-modifier-border)';
 
             if (preview.preview.contentChanged) {
-                contentCell.innerHTML = '<span style="color: var(--color-orange);">Will update</span>';
+                const span = contentCell.createSpan({ text: 'Will update' });
+                span.style.color = 'var(--color-orange)';
             } else {
                 contentCell.textContent = 'No change';
                 contentCell.style.color = 'var(--text-muted)';
@@ -201,7 +202,8 @@ export class UpdatePreviewModal extends Modal {
                     ? preserved.join(', ')
                     : `${preserved.slice(0, 2).join(', ')} +${preserved.length - 2}`;
 
-                customCell.innerHTML = `<span style="color: var(--color-green);">${text}</span>`;
+                const span = customCell.createSpan({ text: text });
+                span.style.color = 'var(--color-green)';
                 customCell.title = preserved.join(', ');
             } else {
                 customCell.textContent = '-';

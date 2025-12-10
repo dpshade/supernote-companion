@@ -41,7 +41,8 @@ export class TrashManagementModal extends Modal {
 
         // Count
         const countEl = contentEl.createEl('p');
-        countEl.innerHTML = `<strong>${this.trashedIds.length}</strong> note(s) currently trashed`;
+        countEl.createEl('strong', { text: String(this.trashedIds.length) });
+        countEl.appendText(' note(s) currently trashed');
         countEl.style.marginBottom = '20px';
 
         if (this.trashedIds.length === 0) {
@@ -49,10 +50,11 @@ export class TrashManagementModal extends Modal {
             emptyEl.style.textAlign = 'center';
             emptyEl.style.padding = '40px';
             emptyEl.style.color = 'var(--text-muted)';
-            emptyEl.innerHTML = `
-                <div style="font-size: 3em; margin-bottom: 10px;">🗑️</div>
-                <div>No notes in trash</div>
-            `;
+            const iconEl = emptyEl.createDiv();
+            iconEl.style.fontSize = '3em';
+            iconEl.style.marginBottom = '10px';
+            iconEl.setText('🗑️');
+            emptyEl.createDiv({ text: 'No notes in trash' });
         } else {
             // Scrollable list container
             const listContainer = contentEl.createDiv('trash-list-container');

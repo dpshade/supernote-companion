@@ -30,26 +30,15 @@ export class SyncStatusModal extends Modal {
         summaryEl.style.backgroundColor = 'var(--background-secondary)';
         summaryEl.style.borderRadius = '8px';
 
-        summaryEl.innerHTML = `
-            <div style="display: flex; justify-content: space-around; text-align: center;">
-                <div>
-                    <div style="font-size: 2em; font-weight: bold;">${total}</div>
-                    <div style="color: var(--text-muted);">Total Notes</div>
-                </div>
-                <div>
-                    <div style="font-size: 2em; font-weight: bold; color: var(--text-accent);">${this.status.new.length}</div>
-                    <div style="color: var(--text-muted);">New</div>
-                </div>
-                <div>
-                    <div style="font-size: 2em; font-weight: bold; color: var(--color-orange);">${this.status.updated.length}</div>
-                    <div style="color: var(--text-muted);">Updated</div>
-                </div>
-                <div>
-                    <div style="font-size: 2em; font-weight: bold; color: var(--color-green);">${this.status.synced.length}</div>
-                    <div style="color: var(--text-muted);">Synced</div>
-                </div>
-            </div>
-        `;
+        const flexContainer = summaryEl.createDiv();
+        flexContainer.style.display = 'flex';
+        flexContainer.style.justifyContent = 'space-around';
+        flexContainer.style.textAlign = 'center';
+
+        this.createStatBox(flexContainer, String(total), 'Total Notes');
+        this.createStatBox(flexContainer, String(this.status.new.length), 'New', 'var(--text-accent)');
+        this.createStatBox(flexContainer, String(this.status.updated.length), 'Updated', 'var(--color-orange)');
+        this.createStatBox(flexContainer, String(this.status.synced.length), 'Synced', 'var(--color-green)');
 
         // Scrollable content area
         const scrollContainer = contentEl.createDiv('sync-status-scroll');
@@ -211,6 +200,16 @@ export class SyncStatusModal extends Modal {
         const start = path.slice(0, 15);
         const end = path.slice(-20);
         return `${start}...${end}`;
+    }
+
+    private createStatBox(container: HTMLElement, value: string, label: string, color?: string): void {
+        const box = container.createDiv();
+        const valueEl = box.createDiv({ text: value });
+        valueEl.style.fontSize = '2em';
+        valueEl.style.fontWeight = 'bold';
+        if (color) valueEl.style.color = color;
+        const labelEl = box.createDiv({ text: label });
+        labelEl.style.color = 'var(--text-muted)';
     }
 
     onClose(): void {

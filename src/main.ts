@@ -30,6 +30,8 @@ export default class SupernoteCompanionPlugin extends Plugin {
     }
 
     onunload(): void {
+        // Clean up API client reference
+        this.apiClient = null;
         console.log('Supernote Companion plugin unloaded');
     }
 
