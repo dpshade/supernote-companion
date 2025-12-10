@@ -178,7 +178,7 @@ export class PdfConverter {
     /**
      * Check if the PDF conversion is available
      */
-    async isToolAvailable(): Promise<boolean> {
+    isToolAvailable(): boolean {
         if (this.mode === 'builtin') {
             return true;
         }

@@ -106,7 +106,7 @@ export class NoteImporter {
     /**
      * Check if the PDF conversion is available (always true with built-in converter)
      */
-    async isPdfToolAvailable(): Promise<boolean> {
+    isPdfToolAvailable(): boolean {
         return this.pdfConverter.isToolAvailable();
     }
 
@@ -461,7 +461,7 @@ export class NoteImporter {
 
             // Get thumbnail if enabled
             if (this.exportOptions.includeThumbnail) {
-                thumbnailBase64 = await this.client.getThumbnail(note.id) ?? undefined;
+                thumbnailBase64 = this.client.getThumbnail(note.id) ?? undefined;
             }
 
             // Generate markdown content
@@ -509,7 +509,7 @@ export class NoteImporter {
 
             // Get thumbnail if enabled
             if (this.exportOptions.includeThumbnail) {
-                thumbnailBase64 = await this.client.getThumbnail(note.id) ?? undefined;
+                thumbnailBase64 = this.client.getThumbnail(note.id) ?? undefined;
             }
 
             // Generate markdown content (no PDF path)
@@ -615,7 +615,7 @@ export class NoteImporter {
             // Get thumbnail if needed
             let thumbnailBase64: string | undefined;
             if (this.exportOptions.includeThumbnail) {
-                thumbnailBase64 = await this.client.getThumbnail(note.id) ?? undefined;
+                thumbnailBase64 = this.client.getThumbnail(note.id) ?? undefined;
             }
 
             // Apply update based on mode

@@ -193,7 +193,7 @@ export default class SupernoteCompanionPlugin extends Plugin {
             const localNotes = await scanLocalNotes(this.app.vault, this.settings.notesFolder);
             
             // Also scan for existing PDFs by name (for pdf-only mode)
-            const existingPdfs = await scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
+            const existingPdfs = scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
 
             // Calculate status
             const status = calculateSyncStatus(remoteNotes, localNotes, existingPdfs);
@@ -230,7 +230,7 @@ export default class SupernoteCompanionPlugin extends Plugin {
             const localNotes = await scanLocalNotes(this.app.vault, this.settings.notesFolder);
             
             // Also scan for existing PDFs by name (for pdf-only mode)
-            const existingPdfs = await scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
+            const existingPdfs = scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
 
             // Filter to only new notes (not in local markdown OR existing PDFs)
             const newNotes = filterNewNotes(remoteNotes, localNotes, existingPdfs);

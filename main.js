@@ -273,14 +273,14 @@ var _SupernoteAPIClient = class {
    * Note: The Supernote device doesn't provide thumbnails via its API
    * This would require downloading and parsing the .note file
    */
-  async getThumbnail(_noteId) {
+  getThumbnail(_noteId) {
     return null;
   }
   /**
    * @deprecated Use downloadNoteFile instead. PDF conversion is done locally.
    * This method is kept for API compatibility but throws an error.
    */
-  async requestPdfConversion(_noteId) {
+  requestPdfConversion(_noteId) {
     throw new Error(
       "PDF conversion is not available from the Supernote device. Use the local PdfConverter class with supernote_pdf instead."
     );
@@ -323,14 +323,14 @@ var MockSupernoteAPIClient = class extends SupernoteAPIClient {
     ];
   }
   async checkConnection() {
-    return {
+    return await Promise.resolve({
       connected: true,
       serverUrl: "http://localhost:8089 (mock)",
       lastChecked: Date.now()
-    };
+    });
   }
   async validateConnection() {
-    return true;
+    return await Promise.resolve(true);
   }
   async fetchNoteFiles() {
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -351,7 +351,7 @@ var MockSupernoteAPIClient = class extends SupernoteAPIClient {
   async downloadFile(path3) {
     return this.downloadNoteFile(path3);
   }
-  async getThumbnail(_noteId) {
+  getThumbnail(_noteId) {
     return null;
   }
 };
@@ -5070,7 +5070,7 @@ var PdfConverter = class {
   /**
    * Check if the PDF conversion is available
    */
-  async isToolAvailable() {
+  isToolAvailable() {
     if (this.mode === "builtin") {
       return true;
     }
@@ -5597,7 +5597,7 @@ Make sure Browse & Access is enabled on your Supernote.`);
     );
     if (this.plugin.settings.converterMode === "cli") {
       new import_obsidian2.Setting(advancedContent).setName("CLI binary path").setDesc("Path to the supernote_pdf binary (e.g., /usr/local/bin/supernote_pdf)").addText(
-        (text) => text.setPlaceholder("/usr/local/bin/supernote_pdf").setValue(this.plugin.settings.converterPath).onChange(async (value) => {
+        (text) => text.setPlaceholder("Path to binary").setValue(this.plugin.settings.converterPath).onChange(async (value) => {
           this.plugin.settings.converterPath = value.trim();
           await this.plugin.saveSettings();
         })
@@ -5615,7 +5615,7 @@ Make sure Browse & Access is enabled on your Supernote.`);
               this.plugin.settings.converterMode,
               this.plugin.settings.converterPath
             );
-            const available = await converter.isToolAvailable();
+            const available = converter.isToolAvailable();
             const version = await converter.getToolVersion();
             if (available) {
               new import_obsidian2.Notice(`CLI converter working! ${version}`);
@@ -6752,7 +6752,7 @@ async function scanLocalNotes(vault, folderPath) {
   }
   return localNotes;
 }
-async function scanLocalPdfsByName(vault, folderPath) {
+function scanLocalPdfsByName(vault, folderPath) {
   const pdfsByName = /* @__PURE__ */ new Map();
   const normalizedFolder = folderPath.startsWith("/") ? folderPath.slice(1) : folderPath;
   const allFiles = vault.getFiles().filter(
@@ -6976,7 +6976,7 @@ var NoteImporter = class {
   /**
    * Check if the PDF conversion is available (always true with built-in converter)
    */
-  async isPdfToolAvailable() {
+  isPdfToolAvailable() {
     return this.pdfConverter.isToolAvailable();
   }
   /**
@@ -7229,7 +7229,7 @@ var NoteImporter = class {
         pdfVaultPath = await this.handlePdfAttachment(note);
       }
       if (this.exportOptions.includeThumbnail) {
-        thumbnailBase64 = (_a = await this.client.getThumbnail(note.id)) != null ? _a : void 0;
+        thumbnailBase64 = (_a = this.client.getThumbnail(note.id)) != null ? _a : void 0;
       }
       const content = generateMarkdown(note, this.exportOptions, pdfVaultPath, thumbnailBase64);
       const filename = generateFilename(note, this.filenameTemplate);
@@ -7266,7 +7266,7 @@ var NoteImporter = class {
     try {
       let thumbnailBase64;
       if (this.exportOptions.includeThumbnail) {
-        thumbnailBase64 = (_a = await this.client.getThumbnail(note.id)) != null ? _a : void 0;
+        thumbnailBase64 = (_a = this.client.getThumbnail(note.id)) != null ? _a : void 0;
       }
       const optionsWithoutPdf = { ...this.exportOptions, attachPdf: false };
       const content = generateMarkdown(note, optionsWithoutPdf, void 0, thumbnailBase64);
@@ -7345,7 +7345,7 @@ var NoteImporter = class {
       }
       let thumbnailBase64;
       if (this.exportOptions.includeThumbnail) {
-        thumbnailBase64 = (_a = await this.client.getThumbnail(note.id)) != null ? _a : void 0;
+        thumbnailBase64 = (_a = this.client.getThumbnail(note.id)) != null ? _a : void 0;
       }
       if (this.updateOptions) {
         newContent = this.applySelectiveUpdate(
@@ -7620,7 +7620,7 @@ Make sure Browse & Access is enabled on your Supernote.`);
       let remoteNotes = deduplicateNotes(response.data);
       remoteNotes = filterNotes(remoteNotes, this.settings.trashedNoteIds);
       const localNotes = await scanLocalNotes(this.app.vault, this.settings.notesFolder);
-      const existingPdfs = await scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
+      const existingPdfs = scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
       const status = calculateSyncStatus(remoteNotes, localNotes, existingPdfs);
       new SyncStatusModal(this.app, status).open();
     } catch (error) {
@@ -7643,7 +7643,7 @@ Make sure Browse & Access is enabled on your Supernote.`);
       let remoteNotes = deduplicateNotes(response.data);
       remoteNotes = filterNotes(remoteNotes, this.settings.trashedNoteIds);
       const localNotes = await scanLocalNotes(this.app.vault, this.settings.notesFolder);
-      const existingPdfs = await scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
+      const existingPdfs = scanLocalPdfsByName(this.app.vault, this.settings.notesFolder);
       const newNotes = filterNewNotes(remoteNotes, localNotes, existingPdfs);
       if (newNotes.length === 0) {
         new import_obsidian10.Notice("No new notes to import");

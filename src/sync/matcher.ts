@@ -78,30 +78,30 @@ export async function scanLocalNotes(
  * Scan for local PDF files and create a map by note name for quick lookup
  * This is used for pdf-only mode to check if a note already exists
  */
-export async function scanLocalPdfsByName(
+export function scanLocalPdfsByName(
     vault: Vault,
     folderPath: string
-): Promise<Map<string, TFile>> {
+): Map<string, TFile> {
     const pdfsByName = new Map<string, TFile>();
-    
+
     // Normalize folder path
     const normalizedFolder = folderPath.startsWith('/') ? folderPath.slice(1) : folderPath;
-    
+
     // Get all PDF files in the folder (recursively)
-    const allFiles = vault.getFiles().filter(file => 
+    const allFiles = vault.getFiles().filter(file =>
         file.path.startsWith(normalizedFolder) && file.extension === 'pdf'
     );
-    
+
     for (const file of allFiles) {
         // Use basename (without extension) as the key
         // Normalize: lowercase and replace + with space for matching
         const normalizedName = file.basename.toLowerCase().replace(/\+/g, ' ');
         pdfsByName.set(normalizedName, file);
-        
+
         // Also store with the original basename for exact matches
         pdfsByName.set(file.basename.toLowerCase(), file);
     }
-    
+
     return pdfsByName;
 }
 

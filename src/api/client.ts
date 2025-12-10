@@ -285,7 +285,7 @@ export class SupernoteAPIClient {
      * Note: The Supernote device doesn't provide thumbnails via its API
      * This would require downloading and parsing the .note file
      */
-    async getThumbnail(_noteId: string): Promise<string | null> {
+    getThumbnail(_noteId: string): string | null {
         // Thumbnails are not available from the device's HTTP API
         // Would need to download the .note file and extract the first page
         return null;
@@ -295,7 +295,7 @@ export class SupernoteAPIClient {
      * @deprecated Use downloadNoteFile instead. PDF conversion is done locally.
      * This method is kept for API compatibility but throws an error.
      */
-    async requestPdfConversion(_noteId: string): Promise<{ pdfUrl: string; pdfPath: string }> {
+    requestPdfConversion(_noteId: string): never {
         throw new Error(
             'PDF conversion is not available from the Supernote device. ' +
             'Use the local PdfConverter class with supernote_pdf instead.'
@@ -342,15 +342,15 @@ export class MockSupernoteAPIClient extends SupernoteAPIClient {
     }
 
     async checkConnection(): Promise<ConnectionStatus> {
-        return {
+        return await Promise.resolve({
             connected: true,
             serverUrl: 'http://localhost:8089 (mock)',
             lastChecked: Date.now(),
-        };
+        });
     }
 
     async validateConnection(): Promise<boolean> {
-        return true;
+        return await Promise.resolve(true);
     }
 
     async fetchNoteFiles(): Promise<{ data: SupernoteFile[] }> {
@@ -378,7 +378,7 @@ export class MockSupernoteAPIClient extends SupernoteAPIClient {
         return this.downloadNoteFile(path);
     }
 
-    async getThumbnail(_noteId: string): Promise<string | null> {
+    getThumbnail(_noteId: string): string | null {
         return null;
     }
 }

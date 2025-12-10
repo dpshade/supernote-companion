@@ -414,8 +414,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                 .setName('CLI binary path')
                 .setDesc('Path to the supernote_pdf binary (e.g., /usr/local/bin/supernote_pdf)')
                 .addText(text => text
-                    // eslint-disable-next-line obsidianmd/ui/sentence-case
-                    .setPlaceholder('/usr/local/bin/supernote_pdf')
+                    .setPlaceholder('Path to binary')
                     .setValue(this.plugin.settings.converterPath)
                     .onChange(async (value) => {
                         this.plugin.settings.converterPath = value.trim();
@@ -443,7 +442,7 @@ export class SupernoteSettingTab extends PluginSettingTab {
                                 this.plugin.settings.converterMode,
                                 this.plugin.settings.converterPath
                             );
-                            const available = await converter.isToolAvailable();
+                            const available = converter.isToolAvailable();
                             const version = await converter.getToolVersion();
 
                             if (available) {
