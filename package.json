@@ -1,6 +1,6 @@
 {
   "name": "supernote-companion",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Sync Supernote .note files to your Obsidian vault as PDFs with structured markdown entries",
   "main": "main.js",
   "scripts": {
